@@ -7,22 +7,25 @@
 
 	onMount(() => {
 		if ('serviceWorker' in navigator) {
-			navigator.serviceWorker.register('/sw.js').then((reg) => {
-				if (reg.waiting) {
-					updateAvailable = true;
-				}
-				reg.addEventListener('updatefound', () => {
-					const installing = reg.installing;
-					if (!installing) return;
-					installing.addEventListener('statechange', () => {
-						if (installing.state === 'installed' && navigator.serviceWorker.controller) {
-							updateAvailable = true;
-						}
+			navigator.serviceWorker
+				.register('/sw.js')
+				.then((reg) => {
+					if (reg.waiting) {
+						updateAvailable = true;
+					}
+					reg.addEventListener('updatefound', () => {
+						const installing = reg.installing;
+						if (!installing) return;
+						installing.addEventListener('statechange', () => {
+							if (installing.state === 'installed' && navigator.serviceWorker.controller) {
+								updateAvailable = true;
+							}
+						});
 					});
+				})
+				.catch(() => {
+					// registration failed
 				});
-			}).catch(() => {
-				// registration failed
-			});
 		}
 	});
 
@@ -44,7 +47,9 @@
 <slot />
 
 {#if updateAvailable}
-	<div class="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-white/90 text-sm px-4 py-2 rounded shadow-lg">
+	<div
+		class="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-white/90 text-sm px-4 py-2 rounded shadow-lg"
+	>
 		<span>Update available</span>
 		<button on:click={reloadForUpdate} class="ml-3 font-medium">Reload</button>
 	</div>
