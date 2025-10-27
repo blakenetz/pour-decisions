@@ -1,0 +1,32 @@
+@font-face {
+	font-family: 'Barriecito';
+	src: url('/fonts/barriecito-regular.ttf') format('truetype');
+	font-weight: normal;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Barrio';
+	src: url('/fonts/barrio-regular.ttf') format('truetype');
+	font-weight: normal;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Danfo';
+	src: url('/fonts/danfo-regular-variable.ttf') format('truetype-variations');
+	font-weight: 100 900;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Vibes';
+	src: url('/fonts/vibes-regular.ttf') format('truetype');
+	font-weight: normal;
+	font-style: normal;
+	font-display: swap;
+}
+

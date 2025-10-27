@@ -1,3 +1,40 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
+
+body {
+	@apply bg-off-white;
+}
+
+@theme {
+	/* Brand Teal Colors */
+	--color-brand-teal-50: #f0f5f4;
+	--color-brand-teal-100: #e1ebea;
+	--color-brand-teal-200: #c2d7d5;
+	--color-brand-teal-300: #a3c3c1;
+	--color-brand-teal-400: #84b0ad;
+	--color-brand-teal-500: #659d99;
+	--color-brand-teal-600: #527e7b;
+	--color-brand-teal-700: #3f5f5c;
+	--color-brand-teal-800: #2c403e;
+	--color-brand-teal-900: #19201f;
+
+	/* Accent Peach Colors */
+	--color-accent-peach-50: #fff5f3;
+	--color-accent-peach-100: #ffebe7;
+	--color-accent-peach-200: #ffd4cc;
+	--color-accent-peach-300: #ffbdaf;
+	--color-accent-peach-400: #ffa693;
+	--color-accent-peach-500: #ff8e76;
+	--color-accent-peach-600: #cc715f;
+	--color-accent-peach-700: #995447;
+	--color-accent-peach-800: #66372e;
+	--color-accent-peach-900: #331a17;
+
+	/* Additional Colors */
+	--color-dark-ink: #262626;
+	--color-light-bg: #f8f8f8;
+	--color-charcoal: #1a1a1a;
+	--color-off-white: #f8f2e8;
+	--color-warm-gold: #d4af37;
+}
