@@ -2,7 +2,6 @@ const CACHE_NAME = "pour-decisions-cache-v1";
 const PRECACHE_URLS = [
   "/",
   "/offline.html",
-  "/app.css",
   "/favicon.svg",
   "/manifest.webmanifest",
 ];

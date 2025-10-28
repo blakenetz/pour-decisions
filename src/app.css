@@ -1,3 +1,4 @@
+@import './fonts.css';
 @import 'tailwindcss';
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
@@ -37,4 +38,14 @@ body {
 	--color-charcoal: #1a1a1a;
 	--color-off-white: #f8f2e8;
 	--color-warm-gold: #d4af37;
+}
+
+/* Set Barrio font for all heading elements */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+	font-family: 'Barrio', sans-serif;
 }
