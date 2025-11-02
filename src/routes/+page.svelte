@@ -1,6 +1,6 @@
 <script lang="ts">
-  import tableSettingImage from '$lib/assets/table-setting.png';
-  import ReshapeButton from '$lib/components/ReshapeButton.svelte';
+	import tableSettingImage from '$lib/assets/table-setting.png';
+	import { OvalButton, LoopLink, SquigglyLink } from '$lib';
 </script>
 
 <div class="flex flex-col items-center min-h-[100dvh] max-h-[100dvh] px-4">
@@ -12,8 +12,9 @@
 			class="max-h-full max-w-full w-auto h-auto object-contain mx-auto"
 		/>
 	</div>
-	  <div class="mt-8 mb-4 flex gap-4">
-    <ReshapeButton as="a" href="/login" class="inline-block">Login</ReshapeButton>
-    <ReshapeButton as="a" href="/signup" class="inline-block">Sign up</ReshapeButton>
-  </div>
+	<div class="mt-8 mb-4 flex gap-4">
+		<OvalButton as="a" href="/login">Login</OvalButton>
+		<LoopLink as="a" href="/signup">Loop</LoopLink>
+		<SquigglyLink as="a" href="/signup">Squig</SquigglyLink>
+	</div>
 </div>
