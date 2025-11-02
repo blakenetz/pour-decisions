@@ -70,7 +70,7 @@
 		pointer-events: none;
 		fill: none;
 		stroke: #000;
-		stroke-width: 1px;
+		stroke-width: 5px;
 	}
 
 	.underline path {

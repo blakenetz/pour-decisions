@@ -49,3 +49,8 @@ h5,
 h6 {
 	font-family: 'Barrio', sans-serif;
 }
+
+button,
+a {
+	font-family: 'Barriecito', sans-serif;
+}

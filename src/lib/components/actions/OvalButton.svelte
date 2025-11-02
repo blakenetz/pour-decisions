@@ -46,7 +46,6 @@
 	}
 
 	.root {
-		font-family: freight-display-pro, serif;
 		font-weight: 900;
 		width: 175px;
 		height: 120px;
@@ -85,7 +84,7 @@
 		width: 97%;
 		top: 5%;
 		border-radius: 58% 42% 55% 45% / 56% 45% 55% 44%;
-		border: 1px solid #000;
+		border: 3px solid #000;
 		transform: rotate(-20deg);
 		z-index: -1;
 		transition: transform 0.5s cubic-bezier(0.585, 2.5, 0.645, 0.55);
