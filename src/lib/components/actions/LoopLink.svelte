@@ -3,7 +3,7 @@
 </script>
 
 <svelte:element this={as} {...$$restProps} class={`root ${$$restProps.class ?? ''}`}>
-	<span><slot>Sign up</slot></span>
+	<span><slot></slot></span>
 	<svg
 		class="underline"
 		width="100%"

@@ -6,7 +6,7 @@
 	let updateAvailable = false;
 
 	onMount(() => {
-		if ('serviceWorker' in navigator) {
+		if ('serviceWorker' in navigator && !import.meta.env.DEV) {
 			navigator.serviceWorker
 				.register('/sw.js')
 				.then((reg) => {

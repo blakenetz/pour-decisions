@@ -9,7 +9,7 @@
 	type={as === 'button' ? 'button' : undefined}
 >
 	<span>
-		<slot>button</slot>
+		<slot></slot>
 	</span>
 </svelte:element>
 
@@ -30,8 +30,7 @@
 		border: none;
 		padding: 1.5rem 3rem;
 		margin: 0;
-		font-family: inherit;
-		font-size: inherit;
+		font-size: 1.25rem;
 		position: relative;
 		display: inline-block;
 	}
