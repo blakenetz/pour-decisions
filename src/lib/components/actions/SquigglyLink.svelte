@@ -2,7 +2,12 @@
 	export let as: keyof HTMLElementTagNameMap = 'a';
 </script>
 
-<svelte:element this={as} {...$$restProps} class={`root ${$$restProps.class ?? ''}`}>
+<svelte:element
+	this={as}
+	{...$$restProps}
+	class={`root ${$$restProps.class ?? ''}`}
+	type={as === 'button' ? 'button' : undefined}
+>
 	<span><slot></slot></span>
 	<svg
 		class="underline"

@@ -2,10 +2,12 @@
 	import '../app.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import { onMount } from 'svelte';
+	import { initAmplify } from '$lib/auth/amplifyClient';
 
 	let updateAvailable = false;
 
 	onMount(() => {
+		initAmplify();
 		if ('serviceWorker' in navigator && !import.meta.env.DEV) {
 			navigator.serviceWorker
 				.register('/sw.js')
