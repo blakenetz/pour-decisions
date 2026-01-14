@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { createEventDispatcher, onMount, tick } from 'svelte';
+	import { createEventDispatcher, onMount, onDestroy, tick } from 'svelte';
 	import { fly } from 'svelte/transition';
 
 	export let open = false;
@@ -11,75 +11,72 @@
 	let dialogSupported = true;
 
 	onMount(() => {
-		console.log('[Modal] onMount - title:', title);
 		// Check if dialog element is supported
 		if (
 			typeof HTMLDialogElement === 'undefined' ||
 			typeof HTMLDialogElement.prototype.showModal !== 'function'
 		) {
 			dialogSupported = false;
-			console.warn(
-				'HTMLDialogElement is not supported in this browser. Consider using a polyfill.'
-			);
-		} else {
-			console.log('[Modal] Dialog element is supported');
-		}
+			// native <dialog> not supported; use fallback markup
+			console.warn('HTMLDialogElement is not supported in this browser. Using fallback modal.');
+
+			// Add Escape key handler to close fallback modal
+			const escHandler = (e: KeyboardEvent) => {
+				if (e.key === 'Escape' && open) {
+					handleClose();
+				}
+			};
+			window.addEventListener('keydown', escHandler);
+			onDestroy(() => window.removeEventListener('keydown', escHandler));
+		} 
 	});
 
 	function handleClose() {
-		console.log('[Modal] handleClose called');
 		dispatch('close');
 	}
 
 	function handleCancel(e: Event) {
 		// Prevent default close behavior and handle it ourselves
 		e.preventDefault();
-		console.log('[Modal] handleCancel called');
 		handleClose();
 	}
 
+	function handleBackdropClick(e: MouseEvent) {
+		// Only close if the click happened on the backdrop, not the content
+		if (e.target === e.currentTarget) {
+			handleClose();
+		}
+	}
+
+	function handleBackdropKey(e: KeyboardEvent) {
+		// Allow Enter/Space to activate backdrop click for keyboard users
+		if ((e.key === 'Enter' || e.key === ' ') && open) {
+			// Prevent scrolling on space
+			e.preventDefault();
+			handleClose();
+		}
+	}
+
 	async function updateDialog() {
-		console.log('[Modal] updateDialog called - open:', open, 'dialogElement:', !!dialogElement, 'dialogSupported:', dialogSupported);
-		
 		// Wait for DOM to be ready
 		await tick();
-		
-		if (!dialogElement) {
-			console.log('[Modal] dialogElement not yet bound, skipping');
-			return;
-		}
-		
-		if (!dialogSupported) {
-			console.log('[Modal] Dialog not supported, skipping');
-			return;
-		}
-		
+
+		if (!dialogElement || !dialogSupported) return;
+
 		if (open) {
-			// Use showModal() instead of show() to get modal behavior
-			if (!dialogElement.open) {
-				console.log('[Modal] Opening dialog with showModal()');
-				dialogElement.showModal();
-				console.log('[Modal] Dialog opened, dialogElement.open:', dialogElement.open);
-			} else {
-				console.log('[Modal] Dialog already open, skipping');
-			}
+			if (!dialogElement.open) dialogElement.showModal();
 		} else {
-			// Only close if it's currently open to avoid errors
-			if (dialogElement.open) {
-				console.log('[Modal] Closing dialog');
-				dialogElement.close();
-				console.log('[Modal] Dialog closed, dialogElement.open:', dialogElement.open);
-			} else {
-				console.log('[Modal] Dialog already closed, skipping');
-			}
+			if (dialogElement.open) dialogElement.close();
 		}
 	}
 
 	// Watch for open prop changes and show/hide dialog accordingly
 	$: {
-		console.log('[Modal] Reactive statement triggered - open:', open, 'title:', title);
 		updateDialog();
 	}
+
+	// If the dialog element gets bound after initial render, ensure we sync state
+	$: if (dialogElement) updateDialog();
 </script>
 
 <dialog
@@ -98,6 +95,29 @@
 		</div>
 	</div>
 </dialog>
+
+{#if !dialogSupported}
+	<!-- Fallback modal for browsers without native <dialog> support -->
+	<div
+		class="modal-backdrop"
+		role="dialog"
+		aria-modal="true"
+		aria-labelledby={title ? 'modal-title' : undefined}
+	on:click={handleBackdropClick}
+	on:keydown={handleBackdropKey}
+	tabindex="-1"
+	class:show={open}
+	>
+		<div class="dialog-content" transition:fly={{ y: -20, duration: 200 }}>
+			<div class="p-6">
+				{#if title}
+					<h2 id="modal-title" class="text-2xl font-semibold mb-6">{title}</h2>
+				{/if}
+				<slot />
+			</div>
+		</div>
+	</div>
+{/if}
 
 <style>
 	.dialog {

@@ -1,5 +1,12 @@
 <script lang="ts">
+	import { createEventDispatcher } from 'svelte';
 	export let as: keyof HTMLElementTagNameMap = 'a';
+
+	const dispatch = createEventDispatcher();
+
+	function handleClick(e: MouseEvent) {
+		dispatch('click', e);
+	}
 </script>
 
 <svelte:element
@@ -7,6 +14,7 @@
 	{...$$restProps}
 	class={`root ${$$restProps.class ?? ''}`}
 	type={as === 'button' ? 'button' : undefined}
+	on:click={handleClick}
 >
 	<span><slot></slot></span>
 	<svg
