@@ -15,6 +15,8 @@
 	let errorMsg = '';
 	let isOnline = true;
 
+	const submitLabel = 'Create account';
+
 	onMount(() => {
 		if (browser) {
 			initAmplify();
@@ -125,8 +127,8 @@
 				/>
 			</div>
 			<button class="w-full bg-black text-white py-2 rounded" disabled={loading || !isOnline}>
-				{#if loading}Creating...{/if}
-				{#if !loading && isOnline}Create account{/if}
+				{#if loading}{submitLabel}...{/if}
+				{#if !loading && isOnline}{submitLabel}{/if}
 				{#if !loading && !isOnline}Go online to create account{/if}
 			</button>
 		</form>

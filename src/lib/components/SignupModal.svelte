@@ -19,6 +19,8 @@
 	let errorMsg = '';
 	let isOnline = true;
 
+	const getSubmitLabel = (s: typeof step) => (s === 'signup' ? 'Create account' : 'Confirm');
+
 	onMount(() => {
 		if (browser) {
 			initAmplify();
@@ -228,8 +230,8 @@
 				class="w-full bg-black text-white py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed"
 				disabled={loading || !isOnline}
 			>
-				{#if loading}Creating...{/if}
-				{#if !loading && isOnline}Create account{/if}
+				{#if loading}{getSubmitLabel(step)}...{/if}
+				{#if !loading && isOnline}{getSubmitLabel(step)}{/if}
 				{#if !loading && !isOnline}Go online to create account{/if}
 			</button>
 		</form>

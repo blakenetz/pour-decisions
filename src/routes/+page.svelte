@@ -13,11 +13,6 @@
 	let loginModalOpen = false;
 	let signupModalOpen = false;
 
-	// Log when modal states change
-	$: {
-		console.log('[Page] Modal state changed:', { loginModalOpen, signupModalOpen });
-	}
-
 	onMount(async () => {
 		if (browser) {
 			const authUser = await getAuthUser();
@@ -44,17 +39,13 @@
 	}
 
 	function openLoginModal() {
-		console.log('[Page] openLoginModal called - current state:', { loginModalOpen, signupModalOpen });
 		signupModalOpen = false;
 		loginModalOpen = true;
-		console.log('[Page] openLoginModal - new state:', { loginModalOpen, signupModalOpen });
 	}
 
 	function openSignupModal() {
-		console.log('[Page] openSignupModal called - current state:', { loginModalOpen, signupModalOpen });
 		loginModalOpen = false;
 		signupModalOpen = true;
-		console.log('[Page] openSignupModal - new state:', { loginModalOpen, signupModalOpen });
 	}
 </script>
 
@@ -80,7 +71,6 @@
 				as="button"
 				type="button"
 				on:click={(e) => {
-					console.log('[Page] Sign Up button clicked');
 					openSignupModal();
 				}}
 			>
@@ -90,7 +80,6 @@
 				as="button"
 				type="button"
 				on:click={(e) => {
-					console.log('[Page] Login button clicked');
 					openLoginModal();
 				}}
 			>
@@ -103,7 +92,6 @@
 <LoginModal
 	open={loginModalOpen}
 	on:close={() => {
-		console.log('[Page] LoginModal close event received');
 		loginModalOpen = false;
 	}}
 	on:success={handleLoginSuccess}
@@ -113,9 +101,7 @@
 <SignupModal
 	open={signupModalOpen}
 	on:close={() => {
-		console.log('[Page] SignupModal close event received');
 		signupModalOpen = false;
 	}}
 	on:switchToLogin={openLoginModal}
 />
-

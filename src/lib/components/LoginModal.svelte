@@ -16,6 +16,8 @@
 	let errorMsg = '';
 	let isOnline = true;
 
+	const submitLabel = 'Sign in';
+
 	onMount(() => {
 		if (browser) {
 			initAmplify();
@@ -183,8 +185,8 @@
 			class="w-full bg-black text-white py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed"
 			disabled={loading || !isOnline}
 		>
-			{#if loading}Signing in...{/if}
-			{#if !loading && isOnline}Sign in{/if}
+			{#if loading}{submitLabel}...{/if}
+			{#if !loading && isOnline}{submitLabel}{/if}
 			{#if !loading && !isOnline}Go online to sign in{/if}
 		</button>
 	</form>
