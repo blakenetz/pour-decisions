@@ -28,7 +28,7 @@
 			};
 			window.addEventListener('keydown', escHandler);
 			onDestroy(() => window.removeEventListener('keydown', escHandler));
-		} 
+		}
 	});
 
 	function handleClose() {
@@ -103,10 +103,10 @@
 		role="dialog"
 		aria-modal="true"
 		aria-labelledby={title ? 'modal-title' : undefined}
-	on:click={handleBackdropClick}
-	on:keydown={handleBackdropKey}
-	tabindex="-1"
-	class:show={open}
+		on:click={handleBackdropClick}
+		on:keydown={handleBackdropKey}
+		tabindex="-1"
+		class:show={open}
 	>
 		<div class="dialog-content" transition:fly={{ y: -20, duration: 200 }}>
 			<div class="p-6">
