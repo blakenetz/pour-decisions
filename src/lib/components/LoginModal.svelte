@@ -22,12 +22,10 @@
 		if (browser) {
 			initAmplify();
 			isOnline = navigator.onLine;
-			const offlineHandler = () => {
-				isOnline = false;
-			};
-			const onlineHandler = () => {
-				isOnline = true;
-			};
+			
+			const offlineHandler = () => isOnline = false;
+			const onlineHandler = () => isOnline = true;
+			
 			window.addEventListener('online', onlineHandler);
 			window.addEventListener('offline', offlineHandler);
 			onDestroy(() => {

@@ -16,12 +16,12 @@ export interface AuthUser {
  */
 export async function getAuthUser(): Promise<AuthUser | null> {
 	if (!browser) return null;
-	
+
 	try {
 		initAmplify();
 		const user = await getCurrentUser();
 		return user;
-	} catch (error) {
+	} catch {
 		// User is not authenticated
 		return null;
 	}
@@ -40,12 +40,12 @@ export async function isAuthenticated(): Promise<boolean> {
  */
 export async function getAuthSession() {
 	if (!browser) return null;
-	
+
 	try {
 		initAmplify();
 		const session = await fetchAuthSession();
 		return session;
-	} catch (error) {
+	} catch {
 		return null;
 	}
 }
@@ -63,7 +63,7 @@ export async function signInUser(username: string, password: string) {
  */
 export async function signOutUser() {
 	if (!browser) return;
-	
+
 	try {
 		initAmplify();
 		await signOut();
@@ -76,17 +76,19 @@ export async function signOutUser() {
 /**
  * Sign in with OAuth provider (Google, GitHub, Apple, etc.)
  */
-export async function signInWithOAuth(provider: 'Google' | 'Facebook' | 'Apple' | 'Amazon' | 'GitHub') {
+export async function signInWithOAuth(
+	provider: 'Google' | 'Facebook' | 'Apple' | 'Amazon' | 'GitHub'
+) {
 	if (!browser) {
 		throw new Error('OAuth sign-in is only available in the browser');
 	}
-	
+
 	try {
 		initAmplify();
 		const { signInWithRedirect } = await import('aws-amplify/auth');
-		
+
 		await signInWithRedirect({
-			provider,
+			provider: provider,
 			options: {
 				preferPrivateSession: false
 			}

@@ -11,6 +11,7 @@
 	let dialogSupported = true;
 
 	onMount(() => {
+		console.log('mounted', { open });
 		// Check if dialog element is supported
 		if (
 			typeof HTMLDialogElement === 'undefined' ||
@@ -58,8 +59,11 @@
 	}
 
 	async function updateDialog() {
+		console.log('updateDialog', { open });
+
 		// Wait for DOM to be ready
 		await tick();
+		console.log('updateDialog - after tick', { open });
 
 		if (!dialogElement || !dialogSupported) return;
 
@@ -71,12 +75,12 @@
 	}
 
 	// Watch for open prop changes and show/hide dialog accordingly
-	$: {
+	$: if (open) {
 		updateDialog();
 	}
 
 	// If the dialog element gets bound after initial render, ensure we sync state
-	$: if (dialogElement) updateDialog();
+	$: if (dialogElement && open) updateDialog();
 </script>
 
 <dialog
