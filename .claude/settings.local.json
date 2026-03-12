@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__svelte__svelte-autofixer",
+      "Bash(npx svelte-check:*)",
+      "Bash(git add:*)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "svelte"
+  ]
+}
