@@ -1,23 +1,23 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
-	export let as: keyof HTMLElementTagNameMap = 'a';
+	import type { Snippet } from 'svelte';
 
-	const dispatch = createEventDispatcher();
-
-	function handleClick(e: MouseEvent) {
-		// Re-dispatch click so parent components can listen with on:click
-		dispatch('click', e);
-	}
+	let { as = 'a', children, onclick, class: className, ...rest }: {
+		as?: keyof HTMLElementTagNameMap;
+		children?: Snippet;
+		onclick?: (e: MouseEvent) => void;
+		class?: string;
+		[key: string]: unknown;
+	} = $props();
 </script>
 
 <svelte:element
 	this={as}
-	{...$$restProps}
-	class={`root ${$$restProps.class ?? ''}`}
+	{...rest}
+	class={`root ${className ?? ''}`}
 	type={as === 'button' ? 'button' : undefined}
-	on:click={handleClick}
+	{onclick}
 >
-	<span style="pointer-events: none;"><slot></slot></span>
+	<span style="pointer-events: none;">{#if children}{@render children()}{/if}</span>
 	<svg
 		class="underline"
 		width="100%"

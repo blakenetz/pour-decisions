@@ -1,20 +1,22 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { browser } from '$app/environment';
 	import { initAmplify } from '$lib/auth/amplifyClient';
 	import { signInUser, signInWithOAuth } from '$lib/auth/auth';
-	import { onDestroy, createEventDispatcher } from 'svelte';
 	import Modal from './Modal.svelte';
 
-	export let open = false;
+	let { open = false, onclose, onsuccess, onswitchtosignup }: {
+		open?: boolean;
+		onclose?: () => void;
+		onsuccess?: () => void;
+		onswitchtosignup?: () => void;
+	} = $props();
 
-	const dispatch = createEventDispatcher();
-
-	let email = '';
-	let password = '';
-	let loading = false;
-	let errorMsg = '';
-	let isOnline = true;
+	let email = $state('');
+	let password = $state('');
+	let loading = $state(false);
+	let errorMsg = $state('');
+	let isOnline = $state(true);
 
 	const submitLabel = 'Sign in';
 
@@ -22,10 +24,10 @@
 		if (browser) {
 			initAmplify();
 			isOnline = navigator.onLine;
-			
+
 			const offlineHandler = () => isOnline = false;
 			const onlineHandler = () => isOnline = true;
-			
+
 			window.addEventListener('online', onlineHandler);
 			window.addEventListener('offline', offlineHandler);
 			onDestroy(() => {
@@ -39,7 +41,7 @@
 		email = '';
 		password = '';
 		errorMsg = '';
-		dispatch('close');
+		onclose?.();
 	}
 
 	async function handleLogin(e: Event) {
@@ -59,7 +61,7 @@
 			}
 
 			// Successfully signed in
-			dispatch('success');
+			onsuccess?.();
 			handleClose();
 		} catch (err: unknown) {
 			const error = err as Error;
@@ -71,7 +73,7 @@
 
 	function handleSwitchToSignup() {
 		handleClose();
-		dispatch('switchToSignup');
+		onswitchtosignup?.();
 	}
 
 	async function handleSocialSignIn(provider: 'Google' | 'Facebook' | 'Apple' | 'Amazon' | 'GitHub') {
@@ -85,12 +87,12 @@
 	}
 </script>
 
-<Modal {open} title="Sign in" on:close={handleClose}>
+<Modal {open} title="Sign in" onclose={handleClose}>
 	<!-- Social Sign In Buttons -->
 	<div class="space-y-3 mb-6">
 		<button
 			type="button"
-			on:click={() => handleSocialSignIn('Google')}
+			onclick={() => handleSocialSignIn('Google')}
 			class="w-full flex items-center justify-center gap-3 border border-gray-300 rounded-lg py-2.5 px-4 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 			disabled={loading || !isOnline}
 		>
@@ -117,7 +119,7 @@
 
 		<button
 			type="button"
-			on:click={() => handleSocialSignIn('GitHub')}
+			onclick={() => handleSocialSignIn('GitHub')}
 			class="w-full flex items-center justify-center gap-3 border border-gray-300 rounded-lg py-2.5 px-4 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 			disabled={loading || !isOnline}
 		>
@@ -133,7 +135,7 @@
 
 		<button
 			type="button"
-			on:click={() => handleSocialSignIn('Apple')}
+			onclick={() => handleSocialSignIn('Apple')}
 			class="w-full flex items-center justify-center gap-3 border border-gray-300 rounded-lg py-2.5 px-4 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 			disabled={loading || !isOnline}
 		>
@@ -153,7 +155,7 @@
 		</div>
 	</div>
 
-	<form on:submit|preventDefault={handleLogin} class="space-y-4">
+	<form onsubmit={handleLogin} class="space-y-4">
 		<div>
 			<label for="login-email" class="block text-sm mb-1">Email</label>
 			<input
@@ -196,7 +198,7 @@
 	<div class="mt-4 text-sm text-center">
 		<p>
 			Don't have an account?
-			<button type="button" on:click={handleSwitchToSignup} class="text-blue-600 underline">
+			<button type="button" onclick={handleSwitchToSignup} class="text-blue-600 underline">
 				Sign up
 			</button>
 		</p>

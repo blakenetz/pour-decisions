@@ -1,14 +1,17 @@
 <script lang="ts">
-	import { createEventDispatcher, onMount, onDestroy, tick } from 'svelte';
+	import type { Snippet } from 'svelte';
+	import { onMount, onDestroy, tick } from 'svelte';
 	import { fly } from 'svelte/transition';
 
-	export let open = false;
-	export let title = '';
+	let { open = false, title = '', onclose, children }: {
+		open?: boolean;
+		title?: string;
+		onclose?: () => void;
+		children?: Snippet;
+	} = $props();
 
-	const dispatch = createEventDispatcher();
-
-	let dialogElement: HTMLDialogElement;
-	let dialogSupported = true;
+	let dialogElement: HTMLDialogElement | undefined = $state();
+	let dialogSupported = $state(true);
 
 	onMount(() => {
 		console.log('mounted', { open });
@@ -33,7 +36,7 @@
 	});
 
 	function handleClose() {
-		dispatch('close');
+		onclose?.();
 	}
 
 	function handleCancel(e: Event) {
@@ -75,27 +78,31 @@
 	}
 
 	// Watch for open prop changes and show/hide dialog accordingly
-	$: if (open) {
-		updateDialog();
-	}
+	$effect(() => {
+		if (open) {
+			updateDialog();
+		}
+	});
 
 	// If the dialog element gets bound after initial render, ensure we sync state
-	$: if (dialogElement && open) updateDialog();
+	$effect(() => {
+		if (dialogElement && open) updateDialog();
+	});
 </script>
 
 <dialog
 	bind:this={dialogElement}
 	class="dialog"
 	aria-labelledby={title ? 'modal-title' : undefined}
-	on:cancel={handleCancel}
-	on:close={handleClose}
+	oncancel={handleCancel}
+	onclose={handleClose}
 >
 	<div class="dialog-content" transition:fly={{ y: -20, duration: 200 }}>
 		<div class="p-6">
 			{#if title}
 				<h2 id="modal-title" class="text-2xl font-semibold mb-6">{title}</h2>
 			{/if}
-			<slot />
+			{#if children}{@render children()}{/if}
 		</div>
 	</div>
 </dialog>
@@ -107,8 +114,8 @@
 		role="dialog"
 		aria-modal="true"
 		aria-labelledby={title ? 'modal-title' : undefined}
-		on:click={handleBackdropClick}
-		on:keydown={handleBackdropKey}
+		onclick={handleBackdropClick}
+		onkeydown={handleBackdropKey}
 		tabindex="-1"
 		class:show={open}
 	>
@@ -117,7 +124,7 @@
 				{#if title}
 					<h2 id="modal-title" class="text-2xl font-semibold mb-6">{title}</h2>
 				{/if}
-				<slot />
+				{#if children}{@render children()}{/if}
 			</div>
 		</div>
 	</div>

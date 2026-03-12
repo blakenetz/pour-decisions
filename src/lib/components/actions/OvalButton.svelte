@@ -1,15 +1,22 @@
 <script lang="ts">
-	export let as: keyof HTMLElementTagNameMap = 'button';
+	import type { Snippet } from 'svelte';
+
+	let { as = 'button', children, class: className, ...rest }: {
+		as?: keyof HTMLElementTagNameMap;
+		children?: Snippet;
+		class?: string;
+		[key: string]: unknown;
+	} = $props();
 </script>
 
 <svelte:element
 	this={as}
-	{...$$restProps}
-	class={`root ${$$restProps.class ?? ''}`}
+	{...rest}
+	class={`root ${className ?? ''}`}
 	type={as === 'button' ? 'button' : undefined}
 >
 	<span>
-		<slot></slot>
+		{#if children}{@render children()}{/if}
 	</span>
 </svelte:element>
 

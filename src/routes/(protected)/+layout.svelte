@@ -1,11 +1,14 @@
 <script lang="ts">
+	import type { Snippet } from 'svelte';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { browser } from '$app/environment';
 	import { isAuthenticated } from '$lib/auth/auth';
 
-	let loading = true;
-	let authenticated = false;
+	let { children }: { children: Snippet } = $props();
+
+	let loading = $state(true);
+	let authenticated = $state(false);
 
 	onMount(async () => {
 		if (browser) {
@@ -25,7 +28,7 @@
 		<p>Loading...</p>
 	</div>
 {:else if authenticated || !browser}
-	<slot />
+	{@render children()}
 {:else}
 	<!-- Will redirect, but show loading just in case -->
 	<div class="flex items-center justify-center min-h-screen">

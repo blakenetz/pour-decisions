@@ -1,10 +1,13 @@
 <script lang="ts">
+	import type { Snippet } from 'svelte';
 	import '../app.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import { onMount } from 'svelte';
 	import { initAmplify } from '$lib/auth/amplifyClient';
 
-	let updateAvailable = false;
+	let { children }: { children: Snippet } = $props();
+
+	let updateAvailable = $state(false);
 
 	onMount(() => {
 		initAmplify();
@@ -46,13 +49,13 @@
 	<link rel="icon" href={favicon} />
 </svelte:head>
 
-<slot />
+{@render children()}
 
 {#if updateAvailable}
 	<div
 		class="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-white/90 text-sm px-4 py-2 rounded shadow-lg"
 	>
 		<span>Update available</span>
-		<button on:click={reloadForUpdate} class="ml-3 font-medium">Reload</button>
+		<button onclick={reloadForUpdate} class="ml-3 font-medium">Reload</button>
 	</div>
 {/if}

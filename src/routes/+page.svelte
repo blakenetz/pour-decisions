@@ -8,10 +8,10 @@
 	import LoginModal from '$lib/components/LoginModal.svelte';
 	import SignupModal from '$lib/components/SignupModal.svelte';
 
-	let user: { username: string } | null = null;
-	let loading = true;
-	let loginModalOpen = false;
-	let signupModalOpen = false;
+	let user: { username: string } | null = $state(null);
+	let loading = $state(true);
+	let loginModalOpen = $state(false);
+	let signupModalOpen = $state(false);
 
 	onMount(async () => {
 		if (browser) {
@@ -65,13 +65,13 @@
 		{:else if user}
 			<div class="flex flex-col items-center gap-2">
 				<p class="text-sm">Signed in as {user.username}</p>
-				<button on:click={handleSignOut} class="text-sm underline">Sign Out</button>
+				<button onclick={handleSignOut} class="text-sm underline">Sign Out</button>
 			</div>
 		{:else}
 			<LoopLink
 				as="button"
 				type="button"
-				on:click={(e) => {
+				onclick={() => {
 					openSignupModal();
 				}}
 			>
@@ -80,7 +80,7 @@
 			<SquigglyLink
 				as="button"
 				type="button"
-				on:click={(e) => {
+				onclick={() => {
 					openLoginModal();
 				}}
 			>
@@ -92,17 +92,17 @@
 
 <LoginModal
 	open={loginModalOpen}
-	on:close={() => {
+	onclose={() => {
 		loginModalOpen = false;
 	}}
-	on:success={handleLoginSuccess}
-	on:switchToSignup={openSignupModal}
+	onsuccess={handleLoginSuccess}
+	onswitchtosignup={openSignupModal}
 />
 
 <SignupModal
 	open={signupModalOpen}
-	on:close={() => {
+	onclose={() => {
 		signupModalOpen = false;
 	}}
-	on:switchToLogin={openLoginModal}
+	onswitchtologin={openLoginModal}
 />

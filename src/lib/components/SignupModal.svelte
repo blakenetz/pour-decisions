@@ -1,23 +1,24 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { browser } from '$app/environment';
 	import { initAmplify } from '$lib/auth/amplifyClient';
 	import { signUp, confirmSignUp, resendSignUpCode, fetchAuthSession } from 'aws-amplify/auth';
-	import { onDestroy, createEventDispatcher } from 'svelte';
 	import Modal from './Modal.svelte';
 
-	export let open = false;
+	let { open = false, onclose, onswitchtologin }: {
+		open?: boolean;
+		onclose?: () => void;
+		onswitchtologin?: () => void;
+	} = $props();
 
-	const dispatch = createEventDispatcher();
-
-	let email = '';
-	let password = '';
-	let code = '';
-	let step: 'signup' | 'confirm' = 'signup';
-	let loading = false;
-	let message = '';
-	let errorMsg = '';
-	let isOnline = true;
+	let email = $state('');
+	let password = $state('');
+	let code = $state('');
+	let step: 'signup' | 'confirm' = $state('signup');
+	let loading = $state(false);
+	let message = $state('');
+	let errorMsg = $state('');
+	let isOnline = $state(true);
 
 	const getSubmitLabel = (s: typeof step) => (s === 'signup' ? 'Create account' : 'Confirm');
 
@@ -52,7 +53,7 @@
 		step = 'signup';
 		message = '';
 		errorMsg = '';
-		dispatch('close');
+		onclose?.();
 	}
 
 	async function handleSignup(e: Event) {
@@ -88,7 +89,7 @@
 			// Close modal and switch to login after a brief delay
 			setTimeout(() => {
 				handleClose();
-				dispatch('switchToLogin');
+				onswitchtologin?.();
 			}, 1500);
 		} catch (err: unknown) {
 			errorMsg = (err as Error).message ?? 'Failed to confirm sign up';
@@ -113,7 +114,7 @@
 
 	function handleSwitchToLogin() {
 		handleClose();
-		dispatch('switchToLogin');
+		onswitchtologin?.();
 	}
 
 	async function handleSocialSignIn(
@@ -136,14 +137,14 @@
 <Modal
 	{open}
 	title={step === 'signup' ? 'Create an account' : 'Confirm your account'}
-	on:close={handleClose}
+	onclose={handleClose}
 >
 	{#if step === 'signup'}
 		<!-- Social Sign In Buttons -->
 		<div class="space-y-3 mb-6">
 			<button
 				type="button"
-				on:click={() => handleSocialSignIn('Google')}
+				onclick={() => handleSocialSignIn('Google')}
 				class="w-full flex items-center justify-center gap-3 border border-gray-300 rounded-lg py-2.5 px-4 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 				disabled={loading || !isOnline}
 			>
@@ -170,7 +171,7 @@
 
 			<button
 				type="button"
-				on:click={() => handleSocialSignIn('GitHub')}
+				onclick={() => handleSocialSignIn('GitHub')}
 				class="w-full flex items-center justify-center gap-3 border border-gray-300 rounded-lg py-2.5 px-4 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 				disabled={loading || !isOnline}
 			>
@@ -186,7 +187,7 @@
 
 			<button
 				type="button"
-				on:click={() => handleSocialSignIn('Apple')}
+				onclick={() => handleSocialSignIn('Apple')}
 				class="w-full flex items-center justify-center gap-3 border border-gray-300 rounded-lg py-2.5 px-4 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 				disabled={loading || !isOnline}
 			>
@@ -208,7 +209,7 @@
 			</div>
 		</div>
 
-		<form on:submit|preventDefault={handleSignup} class="space-y-4">
+		<form onsubmit={handleSignup} class="space-y-4">
 			<div>
 				<label for="signup-email" class="block text-sm mb-1">Email</label>
 				<input
@@ -246,7 +247,7 @@
 	{/if}
 
 	{#if step === 'confirm'}
-		<form on:submit|preventDefault={handleConfirm} class="space-y-4">
+		<form onsubmit={handleConfirm} class="space-y-4">
 			<p class="text-sm text-gray-600">We sent a verification code to {email}.</p>
 			<div>
 				<label for="signup-code" class="block text-sm mb-1">Verification code</label>
@@ -273,7 +274,7 @@
 				<button
 					type="button"
 					class="flex-1 border py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-					on:click={handleResend}
+					onclick={handleResend}
 					disabled={loading || !isOnline}
 				>
 					Resend code
@@ -293,7 +294,7 @@
 		<div class="mt-4 text-sm text-center">
 			<p>
 				Already have an account?
-				<button type="button" on:click={handleSwitchToLogin} class="text-blue-600 underline">
+				<button type="button" onclick={handleSwitchToLogin} class="text-blue-600 underline">
 					Sign in
 				</button>
 			</p>
