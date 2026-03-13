@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import tableSettingImage from '$lib/assets/table-setting.png';
 	import { LoopLink, SquigglyLink } from '$lib';
 	import { getAuthUser, signOutUser } from '$lib/auth/auth';
@@ -25,7 +26,7 @@
 		if (browser) {
 			await signOutUser();
 			user = null;
-			await goto('/');
+			await goto(resolve('/'));
 		}
 	}
 

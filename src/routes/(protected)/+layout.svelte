@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { browser } from '$app/environment';
+	import { resolve } from '$app/paths';
 	import { isAuthenticated } from '$lib/auth/auth';
 
 	let { children }: { children: Snippet } = $props();
@@ -16,7 +17,7 @@
 			if (!authenticated) {
 				// Redirect to login with return URL
 				const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
-				await goto(`/login?redirect=${returnUrl}`);
+				await goto(resolve(`/?redirect=${returnUrl}`));
 			}
 			loading = false;
 		}
