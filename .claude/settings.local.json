@@ -3,7 +3,8 @@
     "allow": [
       "mcp__svelte__svelte-autofixer",
       "Bash(npx svelte-check:*)",
-      "Bash(git add:*)"
+      "Bash(npx eslint:*)",
+      "mcp__svelte__get-documentation"
     ]
   },
   "enableAllProjectMcpServers": true,
