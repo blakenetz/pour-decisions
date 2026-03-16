@@ -14,8 +14,6 @@
 		"format": "prettier --write ."
 	},
 	"devDependencies": {
-		"@aws-amplify/backend": "^1.19.0",
-		"@aws-amplify/backend-cli": "^1.8.1",
 		"@eslint/compat": "^1.4.0",
 		"@eslint/js": "^9.36.0",
 		"@sveltejs/adapter-auto": "^6.1.0",
@@ -38,6 +36,7 @@
 		"vite": "^7.1.7"
 	},
 	"dependencies": {
-		"aws-amplify": "^6.15.9"
+		"aws-amplify": "^6.15.9",
+		"zod": "^4.3.6"
 	}
 }
