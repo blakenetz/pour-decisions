@@ -2,7 +2,9 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { browser } from '$app/environment';
 	import { initAmplify } from '$lib/auth/amplifyClient';
-	import { signUp, confirmSignUp, resendSignUpCode, fetchAuthSession } from 'aws-amplify/auth';
+	import { signUp, signIn, confirmSignUp, resendSignUpCode, fetchAuthSession } from 'aws-amplify/auth';
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import Modal from './Modal.svelte';
 	import { z } from 'zod';
 
@@ -131,11 +133,9 @@
 		errorMsg = '';
 		try {
 			await confirmSignUp({ username: email, confirmationCode: code });
-			message = 'Account confirmed! You can now sign in.';
-			setTimeout(() => {
-				handleClose();
-				onswitchtologin?.();
-			}, 1500);
+			await signIn({ username: email, password });
+			handleClose();
+			await goto(resolve('/dashboard'));
 		} catch (err: unknown) {
 			errorMsg = (err as Error).message ?? 'Failed to confirm sign up';
 		} finally {
