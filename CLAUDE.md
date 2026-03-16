@@ -1,3 +1,29 @@
+# Pour Decisions
+
+A palate analytics app that helps users track and understand their taste preferences.
+
+## Vision
+
+- **v1 (current):** Coffee. Users log tasting entries via a form capturing both quantitative and qualitative data (roaster name, boldness, flavor profiles, acidity, body, etc.). A dashboard synthesizes entries into insights and trends.
+- **v2:** Beer and wine.
+
+## Core Features
+
+- **Tasting form:** A multi-field input form for logging coffee tastings (roaster, origin, brew method, boldness, acidity, sweetness, flavor notes, overall rating, free-text notes, etc.).
+- **Dashboard (`/dashboard`):** Authenticated landing page that aggregates and visualizes tasting data — trends over time, favorite roasters, flavor profile breakdowns, etc.
+- **Auth:** Email/password and social sign-in (Google, GitHub, Apple) via AWS Amplify/Cognito.
+
+## Tech Stack
+
+- SvelteKit (Svelte 5 runes) + TypeScript
+- Tailwind CSS
+- AWS Amplify (Cognito auth)
+- Zod for validation
+
+---
+
+## Svelte MCP Tools
+
 You are able to use the Svelte MCP server, where you have access to comprehensive Svelte 5 and SvelteKit documentation. Here's how to use the available tools effectively:
 
 ## Available MCP Tools:
