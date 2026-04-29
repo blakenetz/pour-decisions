@@ -40,7 +40,6 @@
 	}
 
 	function openLoginModal() {
-		console.log('clicking login');
 		signupModalOpen = false;
 		loginModalOpen = true;
 	}

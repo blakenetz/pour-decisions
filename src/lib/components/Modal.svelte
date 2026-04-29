@@ -14,7 +14,6 @@
 	let dialogSupported = $state(true);
 
 	onMount(() => {
-		console.log('mounted', { open });
 		// Check if dialog element is supported
 		if (
 			typeof HTMLDialogElement === 'undefined' ||
@@ -62,11 +61,8 @@
 	}
 
 	async function updateDialog() {
-		console.log('updateDialog', { open });
-
 		// Wait for DOM to be ready
 		await tick();
-		console.log('updateDialog - after tick', { open });
 
 		if (!dialogElement || !dialogSupported) return;
 

@@ -77,7 +77,7 @@ export async function signOutUser() {
  * Sign in with OAuth provider (Google, GitHub, Apple, etc.)
  */
 export async function signInWithOAuth(
-	provider: 'Google' | 'Facebook' | 'Apple' | 'Amazon' | 'GitHub'
+	provider: 'Google' | 'GitHub'
 ) {
 	if (!browser) {
 		throw new Error('OAuth sign-in is only available in the browser');
@@ -87,8 +87,14 @@ export async function signInWithOAuth(
 		initAmplify();
 		const { signInWithRedirect } = await import('aws-amplify/auth');
 
+		// Google is a built-in Amplify provider; GitHub is an OIDC provider
+		// in Cognito, so it needs the "custom" provider syntax.
+		const providerConfig = provider === 'GitHub'
+			? { provider: { custom: 'GitHub' } }
+			: { provider: provider as 'Google' };
+
 		await signInWithRedirect({
-			provider: provider,
+			...providerConfig,
 			options: {
 				preferPrivateSession: false
 			}
