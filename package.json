@@ -1,5 +1,6 @@
 {
 	"name": "pour-decisions",
+	"description": "A palate analytics app for tracking and understanding taste preferences, starting with coffee.",
 	"private": true,
 	"version": "0.0.1",
 	"type": "module",
@@ -36,6 +37,7 @@
 		"vite": "^7.1.7"
 	},
 	"dependencies": {
+		"@aws-sdk/client-cognito-identity-provider": "^3.1009.0",
 		"aws-amplify": "^6.15.9",
 		"zod": "^4.3.6"
 	}
