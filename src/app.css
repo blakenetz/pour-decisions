@@ -1,7 +1,7 @@
-@import './fonts.css';
-@import 'tailwindcss';
-@plugin '@tailwindcss/forms';
-@plugin '@tailwindcss/typography';
+@import "./fonts.css";
+@import "tailwindcss";
+@plugin "@tailwindcss/forms";
+@plugin "@tailwindcss/typography";
 
 body {
 	@apply bg-off-white;
@@ -47,10 +47,10 @@ h3,
 h4,
 h5,
 h6 {
-	font-family: 'Barrio', sans-serif;
+	font-family: "Barrio", sans-serif;
 }
 
 button,
 a {
-	font-family: 'Barriecito', sans-serif;
+	font-family: "Barriecito", sans-serif;
 }

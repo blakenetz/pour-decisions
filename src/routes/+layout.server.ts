@@ -1,4 +1,4 @@
-import type { LayoutServerLoad } from './$types';
+import type { LayoutServerLoad } from './$types'
 
 export const load: LayoutServerLoad = async () => {
 	// Check authentication status on the server
@@ -7,5 +7,5 @@ export const load: LayoutServerLoad = async () => {
 
 	return {
 		// Add any server-side data you need
-	};
-};
+	}
+}

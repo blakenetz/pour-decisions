@@ -1,12 +1,17 @@
 <script lang="ts">
-	import type { Snippet } from 'svelte';
+import type { Snippet } from 'svelte'
 
-	let { as = 'button', children, class: className, ...rest }: {
-		as?: keyof HTMLElementTagNameMap;
-		children?: Snippet;
-		class?: string;
-		[key: string]: unknown;
-	} = $props();
+let {
+	as = 'button',
+	children,
+	class: className,
+	...rest
+}: {
+	as?: keyof HTMLElementTagNameMap
+	children?: Snippet
+	class?: string
+	[key: string]: unknown
+} = $props()
 </script>
 
 <svelte:element

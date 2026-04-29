@@ -1,89 +1,94 @@
 <script lang="ts">
-	import type { Snippet } from 'svelte';
-	import { onMount, onDestroy, tick } from 'svelte';
-	import { fly } from 'svelte/transition';
+import type { Snippet } from 'svelte'
+import { onDestroy, onMount, tick } from 'svelte'
+import { fly } from 'svelte/transition'
 
-	let { open = false, title = '', onclose, children }: {
-		open?: boolean;
-		title?: string;
-		onclose?: () => void;
-		children?: Snippet;
-	} = $props();
+let {
+	open = false,
+	title = '',
+	onclose,
+	children
+}: {
+	open?: boolean
+	title?: string
+	onclose?: () => void
+	children?: Snippet
+} = $props()
 
-	let dialogElement: HTMLDialogElement | undefined = $state();
-	let dialogSupported = $state(true);
+let dialogElement: HTMLDialogElement | undefined = $state()
+let dialogSupported = $state(true)
 
-	onMount(() => {
-		// Check if dialog element is supported
-		if (
-			typeof HTMLDialogElement === 'undefined' ||
-			typeof HTMLDialogElement.prototype.showModal !== 'function'
-		) {
-			dialogSupported = false;
-			// native <dialog> not supported; use fallback markup
-			console.warn('HTMLDialogElement is not supported in this browser. Using fallback modal.');
+onMount(() => {
+	// Check if dialog element is supported
+	if (
+		typeof HTMLDialogElement === 'undefined' ||
+		typeof HTMLDialogElement.prototype.showModal !== 'function'
+	) {
+		dialogSupported = false
+		// native <dialog> not supported; use fallback markup
+		console.warn('HTMLDialogElement is not supported in this browser. Using fallback modal.')
 
-			// Add Escape key handler to close fallback modal
-			const escHandler = (e: KeyboardEvent) => {
-				if (e.key === 'Escape' && open) {
-					handleClose();
-				}
-			};
-			window.addEventListener('keydown', escHandler);
-			onDestroy(() => window.removeEventListener('keydown', escHandler));
+		// Add Escape key handler to close fallback modal
+		const escHandler = (e: KeyboardEvent) => {
+			if (e.key === 'Escape' && open) {
+				handleClose()
+			}
 		}
-	});
-
-	function handleClose() {
-		onclose?.();
+		window.addEventListener('keydown', escHandler)
+		onDestroy(() => window.removeEventListener('keydown', escHandler))
 	}
+})
 
-	function handleCancel(e: Event) {
-		// Prevent default close behavior and handle it ourselves
-		e.preventDefault();
-		handleClose();
+function handleClose() {
+	onclose?.()
+}
+
+function handleCancel(e: Event) {
+	// Prevent default close behavior and handle it ourselves
+	e.preventDefault()
+	handleClose()
+}
+
+function handleBackdropClick(e: MouseEvent) {
+	// Only close if the click happened on the backdrop, not the content
+	if (e.target === e.currentTarget) {
+		handleClose()
 	}
+}
 
-	function handleBackdropClick(e: MouseEvent) {
-		// Only close if the click happened on the backdrop, not the content
-		if (e.target === e.currentTarget) {
-			handleClose();
-		}
+function handleBackdropKey(e: KeyboardEvent) {
+	// Allow Enter/Space to activate backdrop click for keyboard users
+	if ((e.key === 'Enter' || e.key === ' ') && open) {
+		// Prevent scrolling on space
+		e.preventDefault()
+		handleClose()
 	}
+}
 
-	function handleBackdropKey(e: KeyboardEvent) {
-		// Allow Enter/Space to activate backdrop click for keyboard users
-		if ((e.key === 'Enter' || e.key === ' ') && open) {
-			// Prevent scrolling on space
-			e.preventDefault();
-			handleClose();
-		}
+async function updateDialog() {
+	// Wait for DOM to be ready
+	await tick()
+
+	if (!dialogElement || !dialogSupported) return
+
+	if (open) {
+		if (!dialogElement.open) dialogElement.showModal()
+	} else {
+		if (dialogElement.open) dialogElement.close()
 	}
+}
 
-	async function updateDialog() {
-		// Wait for DOM to be ready
-		await tick();
-
-		if (!dialogElement || !dialogSupported) return;
-
-		if (open) {
-			if (!dialogElement.open) dialogElement.showModal();
-		} else {
-			if (dialogElement.open) dialogElement.close();
-		}
+// Watch for open prop changes and show/hide dialog accordingly
+$effect(() => {
+	if (open) {
+		updateDialog()
 	}
+})
 
-	// Watch for open prop changes and show/hide dialog accordingly
-	$effect(() => {
-		if (open) {
-			updateDialog();
-		}
-	});
-
-	// If the dialog element gets bound after initial render, ensure we sync state
-	$effect(() => {
-		if (dialogElement && open) updateDialog();
-	});
+// If the dialog element gets bound after initial render, ensure we sync state
+$effect(() => {
+	if (dialogElement && open) updateDialog()
+})
 </script>
 
 <dialog

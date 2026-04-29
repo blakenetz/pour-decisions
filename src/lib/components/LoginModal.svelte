@@ -1,94 +1,99 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
-	import { browser } from '$app/environment';
-	import { initAmplify } from '$lib/auth/amplifyClient';
-	import { signInUser, signInWithOAuth } from '$lib/auth/auth';
-	import Modal from './Modal.svelte';
+import { onDestroy, onMount } from 'svelte'
+import { browser } from '$app/environment'
+import { initAmplify } from '$lib/auth/amplifyClient'
+import { signInUser, signInWithOAuth } from '$lib/auth/auth'
+import Modal from './Modal.svelte'
 
-	let { open = false, onclose, onsuccess, onswitchtosignup }: {
-		open?: boolean;
-		onclose?: () => void;
-		onsuccess?: () => void;
-		onswitchtosignup?: () => void;
-	} = $props();
+let {
+	open = false,
+	onclose,
+	onsuccess,
+	onswitchtosignup
+}: {
+	open?: boolean
+	onclose?: () => void
+	onsuccess?: () => void
+	onswitchtosignup?: () => void
+} = $props()
 
-	let email = $state('');
-	let password = $state('');
-	let loading = $state(false);
-	let errorMsg = $state('');
-	let isOnline = $state(true);
+let email = $state('')
+let password = $state('')
+let loading = $state(false)
+let errorMsg = $state('')
+let isOnline = $state(true)
 
-	const submitLabel = 'Sign in';
+const submitLabel = 'Sign in'
 
-	onMount(() => {
-		if (browser) {
-			initAmplify();
-			isOnline = navigator.onLine;
+onMount(() => {
+	if (browser) {
+		initAmplify()
+		isOnline = navigator.onLine
 
-			const offlineHandler = () => isOnline = false;
-			const onlineHandler = () => isOnline = true;
+		const offlineHandler = () => (isOnline = false)
+		const onlineHandler = () => (isOnline = true)
 
-			window.addEventListener('online', onlineHandler);
-			window.addEventListener('offline', offlineHandler);
-			onDestroy(() => {
-				window.removeEventListener('online', onlineHandler);
-				window.removeEventListener('offline', offlineHandler);
-			});
+		window.addEventListener('online', onlineHandler)
+		window.addEventListener('offline', offlineHandler)
+		onDestroy(() => {
+			window.removeEventListener('online', onlineHandler)
+			window.removeEventListener('offline', offlineHandler)
+		})
+	}
+})
+
+function handleClose() {
+	email = ''
+	password = ''
+	errorMsg = ''
+	onclose?.()
+}
+
+async function handleLogin(e: Event) {
+	e.preventDefault()
+	loading = true
+	errorMsg = ''
+	try {
+		const result = await signInUser(email, password)
+
+		// Check if MFA is required
+		if (
+			result.nextStep?.signInStep === 'CONFIRM_SIGN_IN_WITH_TOTP_CODE' ||
+			result.nextStep?.signInStep === 'CONFIRM_SIGN_IN_WITH_SMS_CODE'
+		) {
+			errorMsg = 'MFA is required. Please implement MFA confirmation.'
+			return
 		}
-	});
 
-	function handleClose() {
-		email = '';
-		password = '';
-		errorMsg = '';
-		onclose?.();
+		// Successfully signed in
+		onsuccess?.()
+		handleClose()
+	} catch (err: unknown) {
+		const error = err as Error
+		errorMsg = error.message || 'Failed to sign in'
+	} finally {
+		loading = false
 	}
+}
 
-	async function handleLogin(e: Event) {
-		e.preventDefault();
-		loading = true;
-		errorMsg = '';
-		try {
-			const result = await signInUser(email, password);
+function handleSwitchToSignup() {
+	handleClose()
+	onswitchtosignup?.()
+}
 
-			// Check if MFA is required
-			if (
-				result.nextStep?.signInStep === 'CONFIRM_SIGN_IN_WITH_TOTP_CODE' ||
-				result.nextStep?.signInStep === 'CONFIRM_SIGN_IN_WITH_SMS_CODE'
-			) {
-				errorMsg = 'MFA is required. Please implement MFA confirmation.';
-				return;
-			}
-
-			// Successfully signed in
-			onsuccess?.();
-			handleClose();
-		} catch (err: unknown) {
-			const error = err as Error;
-			errorMsg = error.message || 'Failed to sign in';
-		} finally {
-			loading = false;
+async function handleSocialSignIn(provider: 'Google' | 'GitHub') {
+	try {
+		if (provider === 'GitHub') {
+			const { startGitHubOAuth } = await import('$lib/auth/github')
+			startGitHubOAuth()
+			return
 		}
+		await signInWithOAuth(provider)
+	} catch (err: unknown) {
+		const error = err as Error
+		errorMsg = error.message || `Failed to sign in with ${provider}`
 	}
-
-	function handleSwitchToSignup() {
-		handleClose();
-		onswitchtosignup?.();
-	}
-
-	async function handleSocialSignIn(provider: 'Google' | 'GitHub') {
-		try {
-			if (provider === 'GitHub') {
-				const { startGitHubOAuth } = await import('$lib/auth/github');
-				startGitHubOAuth();
-				return;
-			}
-			await signInWithOAuth(provider);
-		} catch (err: unknown) {
-			const error = err as Error;
-			errorMsg = error.message || `Failed to sign in with ${provider}`;
-		}
-	}
+}
 </script>
 
 <Modal {open} title="Sign in" onclose={handleClose}>

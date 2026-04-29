@@ -1,48 +1,48 @@
 <script lang="ts">
-	import type { Snippet } from 'svelte';
-	import '../app.css';
-	import favicon from '$lib/assets/favicon.svg';
-	import { onMount } from 'svelte';
-	import { initAmplify } from '$lib/auth/amplifyClient';
+import type { Snippet } from 'svelte'
+import '../app.css'
+import { onMount } from 'svelte'
+import favicon from '$lib/assets/favicon.svg'
+import { initAmplify } from '$lib/auth/amplifyClient'
 
-	let { children }: { children: Snippet } = $props();
+let { children }: { children: Snippet } = $props()
 
-	let updateAvailable = $state(false);
+let updateAvailable = $state(false)
 
-	onMount(() => {
-		initAmplify();
-		if ('serviceWorker' in navigator && !import.meta.env.DEV) {
-			navigator.serviceWorker
-				.register('/sw.js')
-				.then((reg) => {
-					if (reg.waiting) {
-						updateAvailable = true;
-					}
-					reg.addEventListener('updatefound', () => {
-						const installing = reg.installing;
-						if (!installing) return;
-						installing.addEventListener('statechange', () => {
-							if (installing.state === 'installed' && navigator.serviceWorker.controller) {
-								updateAvailable = true;
-							}
-						});
-					});
+onMount(() => {
+	initAmplify()
+	if ('serviceWorker' in navigator && !import.meta.env.DEV) {
+		navigator.serviceWorker
+			.register('/sw.js')
+			.then((reg) => {
+				if (reg.waiting) {
+					updateAvailable = true
+				}
+				reg.addEventListener('updatefound', () => {
+					const installing = reg.installing
+					if (!installing) return
+					installing.addEventListener('statechange', () => {
+						if (installing.state === 'installed' && navigator.serviceWorker.controller) {
+							updateAvailable = true
+						}
+					})
 				})
-				.catch(() => {
-					// registration failed
-				});
-		}
-	});
-
-	function reloadForUpdate() {
-		if (navigator.serviceWorker.controller) {
-			navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
-			// after skipWaiting, listen for controllerchange and reload
-			navigator.serviceWorker.addEventListener('controllerchange', () => {
-				window.location.reload();
-			});
-		}
+			})
+			.catch(() => {
+				// registration failed
+			})
 	}
+})
+
+function reloadForUpdate() {
+	if (navigator.serviceWorker.controller) {
+		navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' })
+		// after skipWaiting, listen for controllerchange and reload
+		navigator.serviceWorker.addEventListener('controllerchange', () => {
+			window.location.reload()
+		})
+	}
+}
 </script>
 
 <svelte:head>

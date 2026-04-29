@@ -1,13 +1,19 @@
 <script lang="ts">
-	import type { Snippet } from 'svelte';
+import type { Snippet } from 'svelte'
 
-	let { as = 'a', children, onclick, class: className, ...rest }: {
-		as?: keyof HTMLElementTagNameMap;
-		children?: Snippet;
-		onclick?: (e: MouseEvent) => void;
-		class?: string;
-		[key: string]: unknown;
-	} = $props();
+let {
+	as = 'a',
+	children,
+	onclick,
+	class: className,
+	...rest
+}: {
+	as?: keyof HTMLElementTagNameMap
+	children?: Snippet
+	onclick?: (e: MouseEvent) => void
+	class?: string
+	[key: string]: unknown
+} = $props()
 </script>
 
 <svelte:element

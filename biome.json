@@ -264,6 +264,12 @@
 			"onemptied"
 		]
 	},
+	"css": {
+		"parser": {
+			"cssModules": false,
+			"tailwindDirectives": true
+		}
+	},
 	"html": {
 		"formatter": {
 			"indentScriptAndStyle": false,
@@ -308,17 +314,24 @@
 			"javascript": { "globals": [] },
 			"linter": {
 				"rules": {
-					"correctness": { "noInnerDeclarations": "off", "noSelfAssign": "off" }
+					"correctness": {
+						"noInnerDeclarations": "off",
+						"noSelfAssign": "off",
+						"noUnusedVariables": "off"
+					}
 				}
 			}
 		},
 		{
-			"includes": [
-				"*.svelte.js",
-				"*.svelte.ts",
-				"**/*.svelte.js",
-				"**/*.svelte.ts"
-			],
+			"includes": ["**/*.d.ts"],
+			"linter": {
+				"rules": {
+					"style": { "noNamespace": "off" }
+				}
+			}
+		},
+		{
+			"includes": ["*.svelte.js", "*.svelte.ts", "**/*.svelte.js", "**/*.svelte.ts"],
 			"javascript": { "globals": [] }
 		},
 		{

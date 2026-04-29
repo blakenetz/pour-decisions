@@ -1,25 +1,25 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { browser } from '$app/environment';
-	import { goto } from '$app/navigation';
-	import { resolve } from '$app/paths';
-	import { getAuthUser, signOutUser } from '$lib/auth/auth';
-	import type { AuthUser } from '$lib/auth/auth';
+import { onMount } from 'svelte'
+import { browser } from '$app/environment'
+import { goto } from '$app/navigation'
+import { resolve } from '$app/paths'
+import type { AuthUser } from '$lib/auth/auth'
+import { getAuthUser, signOutUser } from '$lib/auth/auth'
 
-	let user: AuthUser | null = $state(null);
-	let loading = $state(true);
+let user: AuthUser | null = $state(null)
+let loading = $state(true)
 
-	onMount(async () => {
-		if (browser) {
-			user = await getAuthUser();
-			loading = false;
-		}
-	});
-
-	async function handleSignOut() {
-		await signOutUser();
-		await goto(resolve('/'));
+onMount(async () => {
+	if (browser) {
+		user = await getAuthUser()
+		loading = false
 	}
+})
+
+async function handleSignOut() {
+	await signOutUser()
+	await goto(resolve('/'))
+}
 </script>
 
 <section class="flex flex-col items-center min-h-[100dvh] p-4">

@@ -1,186 +1,189 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
-	import { browser } from '$app/environment';
-	import { initAmplify } from '$lib/auth/amplifyClient';
-	import { signUp, signIn, confirmSignUp, resendSignUpCode, fetchAuthSession } from 'aws-amplify/auth';
-	import { goto } from '$app/navigation';
-	import { resolve } from '$app/paths';
-	import Modal from './Modal.svelte';
-	import { z } from 'zod';
+import { confirmSignUp, fetchAuthSession, resendSignUpCode, signIn, signUp } from 'aws-amplify/auth'
+import { onDestroy, onMount } from 'svelte'
+import { z } from 'zod'
+import { browser } from '$app/environment'
+import { goto } from '$app/navigation'
+import { resolve } from '$app/paths'
+import { initAmplify } from '$lib/auth/amplifyClient'
+import Modal from './Modal.svelte'
 
-	let { open = false, onclose, onswitchtologin }: {
-		open?: boolean;
-		onclose?: () => void;
-		onswitchtologin?: () => void;
-	} = $props();
+let {
+	open = false,
+	onclose,
+	onswitchtologin
+}: {
+	open?: boolean
+	onclose?: () => void
+	onswitchtologin?: () => void
+} = $props()
 
-	let email = $state('');
-	let password = $state('');
-	let confirmPassword = $state('');
-	let code = $state('');
-	let step: 'signup' | 'confirm' = $state('signup');
-	let loading = $state(false);
-	let message = $state('');
-	let errorMsg = $state('');
-	let isOnline = $state(true);
-	let passwordError = $state('');
-	let confirmPasswordError = $state('');
-	let passwordTouched = $state(false);
-	let confirmPasswordTouched = $state(false);
+let email = $state('')
+let password = $state('')
+let confirmPassword = $state('')
+let code = $state('')
+let step: 'signup' | 'confirm' = $state('signup')
+let loading = $state(false)
+let message = $state('')
+let errorMsg = $state('')
+let isOnline = $state(true)
+let passwordError = $state('')
+let confirmPasswordError = $state('')
+let passwordTouched = $state(false)
+let confirmPasswordTouched = $state(false)
 
-	const passwordRules = [
-		{ label: 'At least 8 characters', test: (v: string) => v.length >= 8 },
-		{ label: 'At least 1 number', test: (v: string) => /[0-9]/.test(v) },
-		{ label: 'At least 1 special character', test: (v: string) => /[^a-zA-Z0-9]/.test(v) },
-		{ label: 'At least 1 uppercase letter', test: (v: string) => /[A-Z]/.test(v) },
-		{ label: 'At least 1 lowercase letter', test: (v: string) => /[a-z]/.test(v) },
-	];
+const passwordRules = [
+	{ label: 'At least 8 characters', test: (v: string) => v.length >= 8 },
+	{ label: 'At least 1 number', test: (v: string) => /[0-9]/.test(v) },
+	{ label: 'At least 1 special character', test: (v: string) => /[^a-zA-Z0-9]/.test(v) },
+	{ label: 'At least 1 uppercase letter', test: (v: string) => /[A-Z]/.test(v) },
+	{ label: 'At least 1 lowercase letter', test: (v: string) => /[a-z]/.test(v) }
+]
 
-	const passwordSchema = z.string()
-		.min(8, 'Password must be at least 8 characters')
-		.regex(/[0-9]/, 'Must contain at least 1 number')
-		.regex(/[^a-zA-Z0-9]/, 'Must contain at least 1 special character')
-		.regex(/[A-Z]/, 'Must contain at least 1 uppercase letter')
-		.regex(/[a-z]/, 'Must contain at least 1 lowercase letter');
+const passwordSchema = z
+	.string()
+	.min(8, 'Password must be at least 8 characters')
+	.regex(/[0-9]/, 'Must contain at least 1 number')
+	.regex(/[^a-zA-Z0-9]/, 'Must contain at least 1 special character')
+	.regex(/[A-Z]/, 'Must contain at least 1 uppercase letter')
+	.regex(/[a-z]/, 'Must contain at least 1 lowercase letter')
 
-	const getSubmitLabel = (s: typeof step) => (s === 'signup' ? 'Create account' : 'Confirm');
+const getSubmitLabel = (s: typeof step) => (s === 'signup' ? 'Create account' : 'Confirm')
 
-	onMount(() => {
-		if (browser) {
-			initAmplify();
-			isOnline = navigator.onLine;
-			const onlineHandler = async () => {
-				isOnline = true;
-				try {
-					await fetchAuthSession();
-				} catch {
-					// ignore
-				}
-			};
-			const offlineHandler = () => {
-				isOnline = false;
-			};
-			window.addEventListener('online', onlineHandler);
-			window.addEventListener('offline', offlineHandler);
-			onDestroy(() => {
-				window.removeEventListener('online', onlineHandler);
-				window.removeEventListener('offline', offlineHandler);
-			});
-		}
-	});
-
-	function validatePassword() {
-		const result = passwordSchema.safeParse(password);
-		passwordError = result.success ? '' : result.error.issues[0].message;
-	}
-
-	function validateConfirmPassword() {
-		confirmPasswordError = confirmPassword !== password ? 'Passwords do not match' : '';
-	}
-
-	function resetPasswordError() {
-		passwordError = '';
-	}
-
-	function resetConfirmPasswordError() {
-		confirmPasswordError = '';
-	}
-
-	function handleClose() {
-		email = '';
-		password = '';
-		confirmPassword = '';
-		code = '';
-		step = 'signup';
-		message = '';
-		errorMsg = '';
-		passwordError = '';
-		confirmPasswordError = '';
-		passwordTouched = false;
-		confirmPasswordTouched = false;
-		onclose?.();
-	}
-
-	async function handleSignup(e: Event) {
-		e.preventDefault();
-		validatePassword();
-		validateConfirmPassword();
-		if (passwordError || confirmPasswordError) return;
-		loading = true;
-		message = '';
-		errorMsg = '';
-		try {
-			await signUp({
-				username: email,
-				password,
-				options: {
-					userAttributes: { email }
-				}
-			});
-			step = 'confirm';
-			message = 'Verification code sent. Check your email.';
-		} catch (err: unknown) {
-			errorMsg = (err as Error).message ?? 'Failed to sign up';
-		} finally {
-			loading = false;
-		}
-	}
-
-	async function handleConfirm(e: Event) {
-		e.preventDefault();
-		loading = true;
-		message = '';
-		errorMsg = '';
-		try {
-			await confirmSignUp({ username: email, confirmationCode: code });
-			await signIn({ username: email, password });
-			handleClose();
-			await goto(resolve('/dashboard'));
-		} catch (err: unknown) {
-			errorMsg = (err as Error).message ?? 'Failed to confirm sign up';
-		} finally {
-			loading = false;
-		}
-	}
-
-	async function handleResend() {
-		loading = true;
-		message = '';
-		errorMsg = '';
-		try {
-			await resendSignUpCode({ username: email });
-			message = 'Verification code resent.';
-		} catch (err: unknown) {
-			errorMsg = (err as Error).message ?? 'Failed to resend code';
-		} finally {
-			loading = false;
-		}
-	}
-
-	function handleSwitchToLogin() {
-		handleClose();
-		onswitchtologin?.();
-	}
-
-	async function handleSocialSignIn(
-		provider: 'Google' | 'GitHub'
-	) {
-		try {
-			loading = true;
-			errorMsg = '';
-			if (provider === 'GitHub') {
-				const { startGitHubOAuth } = await import('$lib/auth/github');
-				startGitHubOAuth();
-				return;
+onMount(() => {
+	if (browser) {
+		initAmplify()
+		isOnline = navigator.onLine
+		const onlineHandler = async () => {
+			isOnline = true
+			try {
+				await fetchAuthSession()
+			} catch {
+				// ignore
 			}
-			const { signInWithOAuth } = await import('$lib/auth/auth');
-			await signInWithOAuth(provider);
-		} catch (err: unknown) {
-			const error = err as Error;
-			errorMsg = error.message || `Failed to sign in with ${provider}`;
-			loading = false;
 		}
+		const offlineHandler = () => {
+			isOnline = false
+		}
+		window.addEventListener('online', onlineHandler)
+		window.addEventListener('offline', offlineHandler)
+		onDestroy(() => {
+			window.removeEventListener('online', onlineHandler)
+			window.removeEventListener('offline', offlineHandler)
+		})
 	}
+})
+
+function validatePassword() {
+	const result = passwordSchema.safeParse(password)
+	passwordError = result.success ? '' : result.error.issues[0].message
+}
+
+function validateConfirmPassword() {
+	confirmPasswordError = confirmPassword !== password ? 'Passwords do not match' : ''
+}
+
+function resetPasswordError() {
+	passwordError = ''
+}
+
+function resetConfirmPasswordError() {
+	confirmPasswordError = ''
+}
+
+function handleClose() {
+	email = ''
+	password = ''
+	confirmPassword = ''
+	code = ''
+	step = 'signup'
+	message = ''
+	errorMsg = ''
+	passwordError = ''
+	confirmPasswordError = ''
+	passwordTouched = false
+	confirmPasswordTouched = false
+	onclose?.()
+}
+
+async function handleSignup(e: Event) {
+	e.preventDefault()
+	validatePassword()
+	validateConfirmPassword()
+	if (passwordError || confirmPasswordError) return
+	loading = true
+	message = ''
+	errorMsg = ''
+	try {
+		await signUp({
+			username: email,
+			password,
+			options: {
+				userAttributes: { email }
+			}
+		})
+		step = 'confirm'
+		message = 'Verification code sent. Check your email.'
+	} catch (err: unknown) {
+		errorMsg = (err as Error).message ?? 'Failed to sign up'
+	} finally {
+		loading = false
+	}
+}
+
+async function handleConfirm(e: Event) {
+	e.preventDefault()
+	loading = true
+	message = ''
+	errorMsg = ''
+	try {
+		await confirmSignUp({ username: email, confirmationCode: code })
+		await signIn({ username: email, password })
+		handleClose()
+		await goto(resolve('/dashboard'))
+	} catch (err: unknown) {
+		errorMsg = (err as Error).message ?? 'Failed to confirm sign up'
+	} finally {
+		loading = false
+	}
+}
+
+async function handleResend() {
+	loading = true
+	message = ''
+	errorMsg = ''
+	try {
+		await resendSignUpCode({ username: email })
+		message = 'Verification code resent.'
+	} catch (err: unknown) {
+		errorMsg = (err as Error).message ?? 'Failed to resend code'
+	} finally {
+		loading = false
+	}
+}
+
+function handleSwitchToLogin() {
+	handleClose()
+	onswitchtologin?.()
+}
+
+async function handleSocialSignIn(provider: 'Google' | 'GitHub') {
+	try {
+		loading = true
+		errorMsg = ''
+		if (provider === 'GitHub') {
+			const { startGitHubOAuth } = await import('$lib/auth/github')
+			startGitHubOAuth()
+			return
+		}
+		const { signInWithOAuth } = await import('$lib/auth/auth')
+		await signInWithOAuth(provider)
+	} catch (err: unknown) {
+		const error = err as Error
+		errorMsg = error.message || `Failed to sign in with ${provider}`
+		loading = false
+	}
+}
 </script>
 
 <Modal

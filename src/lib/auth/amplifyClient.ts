@@ -1,23 +1,23 @@
-import { browser } from "$app/environment";
-import { Amplify } from "aws-amplify";
-import { env } from "$env/dynamic/public";
+import { Amplify } from 'aws-amplify'
+import { browser } from '$app/environment'
+import { env } from '$env/dynamic/public'
 
-let configured = false;
+let configured = false
 
 export function initAmplify() {
-	if (!browser || configured) return;
+	if (!browser || configured) return
 
-	const userPoolId = env.PUBLIC_COGNITO_USER_POOL_ID;
-	const userPoolClientId = env.PUBLIC_COGNITO_USER_POOL_CLIENT_ID;
-	const region = env.PUBLIC_AWS_REGION;
+	const userPoolId = env.PUBLIC_COGNITO_USER_POOL_ID
+	const userPoolClientId = env.PUBLIC_COGNITO_USER_POOL_CLIENT_ID
+	const region = env.PUBLIC_AWS_REGION
 
 	if (!userPoolId || !userPoolClientId || !region) {
 		if (import.meta.env.DEV) {
 			console.warn(
-				"Missing required Cognito environment variables. Please set PUBLIC_COGNITO_USER_POOL_ID, PUBLIC_COGNITO_USER_POOL_CLIENT_ID, and PUBLIC_AWS_REGION in your .env file.",
-			);
+				'Missing required Cognito environment variables. Please set PUBLIC_COGNITO_USER_POOL_ID, PUBLIC_COGNITO_USER_POOL_CLIENT_ID, and PUBLIC_AWS_REGION in your .env file.'
+			)
 		}
-		return;
+		return
 	}
 
 	const config = {
@@ -29,26 +29,19 @@ export function initAmplify() {
 					loginWith: {
 						oauth: {
 							domain: env.PUBLIC_COGNITO_DOMAIN,
-							scopes: env.PUBLIC_OAUTH_SCOPES?.split(",") || [
-								"email",
-								"openid",
-								"profile",
-							],
+							scopes: env.PUBLIC_OAUTH_SCOPES?.split(',') || ['email', 'openid', 'profile'],
 							redirectSignIn: [
-								env.PUBLIC_OAUTH_REDIRECT_SIGNIN ||
-									"http://localhost:8008/auth/callback",
+								env.PUBLIC_OAUTH_REDIRECT_SIGNIN || 'http://localhost:8008/auth/callback'
 							],
-							redirectSignOut: [
-								env.PUBLIC_OAUTH_REDIRECT_SIGNOUT || "http://localhost:8008/",
-							],
-							responseType: "code" as const,
-						},
-					},
-				}),
-			},
-		},
-	};
+							redirectSignOut: [env.PUBLIC_OAUTH_REDIRECT_SIGNOUT || 'http://localhost:8008/'],
+							responseType: 'code' as const
+						}
+					}
+				})
+			}
+		}
+	}
 
-	Amplify.configure(config);
-	configured = true;
+	Amplify.configure(config)
+	configured = true
 }
