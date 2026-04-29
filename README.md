@@ -1,38 +1,75 @@
-# sv
+# Pour Decisions
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+A palate analytics app that helps users track and understand their taste preferences through structured tasting entries and data visualization.
 
-## Creating a project
+## Vision
 
-If you're seeing this, you've probably already done this step. Congrats!
+- **v1:** Coffee
+- **v2:** Beer and wine
 
-```sh
-# create a new project in the current directory
-npx sv create
+## Features
 
-# create a new project in my-app
-npx sv create my-app
+- **Tasting form** — Log coffee tastings with quantitative and qualitative data (roaster, origin, brew method, boldness, acidity, sweetness, flavor notes, overall rating, notes)
+- **Dashboard** — Aggregates and visualizes tasting data (trends, favorites, flavor breakdowns)
+- **Auth** — Email/password and social sign-in (Google, GitHub, Apple) via AWS Cognito
+
+## Tech Stack
+
+- SvelteKit (Svelte 5) + TypeScript
+- Tailwind CSS
+- AWS Amplify (Cognito auth)
+- Zod (validation)
+
+## Cognito Social Provider Setup
+
+All social providers require the Cognito OAuth callback URL:
+
+```
+https://<your-cognito-domain>/oauth2/idpresponse
 ```
 
-## Developing
+### Google
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+1. **Google Cloud Console:**
+   - Create a project at [Google Cloud Console](https://console.cloud.google.com/)
+   - Go to **APIs & Services** > **OAuth consent screen** > choose **External**
+   - Fill in app name, support email, developer email
+   - Add scopes: `email`, `profile`, `openid`
+   - Add your email as a test user
+   - Go to **Credentials** > **Create Credentials** > **OAuth client ID**
+   - Application type: **Web application**
+   - Authorized JavaScript origins: `http://localhost:8008`
+   - Authorized redirect URIs: `https://<your-cognito-domain>/oauth2/idpresponse`
+   - Save the **Client ID** and **Client Secret**
 
-```sh
-npm run dev
+2. **Cognito Console:**
+   - User Pool > **Sign-in experience** > **Add identity provider** > **Google**
+   - Paste Client ID and Client Secret
+   - Authorized scopes: `email openid profile`
+   - Map attributes: Google `email` → Cognito `email`
+   - Go to **App integration** > your app client > **Edit hosted UI**
+   - Check **Google** under identity providers
+   - Ensure callback URL is `http://localhost:8008/auth/callback`
 
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
+### GitHub
 
-## Building
+GitHub uses OIDC (not a built-in Cognito social type).
 
-To create a production version of your app:
+1. **GitHub:**
+   - Go to [Developer Settings](https://github.com/settings/developers) > **OAuth Apps** > **New OAuth App**
+   - Application name: Pour Decisions
+   - Homepage URL: `http://localhost:8008`
+   - Authorization callback URL: `https://<your-cognito-domain>/oauth2/idpresponse`
+   - Save **Client ID** and generate a **Client Secret**
 
-```sh
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+2. **Cognito Console:**
+   - User Pool > **Sign-in experience** > **Add identity provider** > **OpenID Connect (OIDC)**
+   - Provider name: `GitHub`
+   - Client ID and Client Secret from GitHub
+   - Authorized scopes: `user:email`
+   - Set endpoints manually:
+     - Authorization: `https://github.com/login/oauth/authorize`
+     - Token: `https://github.com/login/oauth/access_token`
+     - UserInfo: `https://api.github.com/user`
+   - Map attributes: `email` → `email`
+   - Go to **App integration** > your app client > **Edit hosted UI** > check **GitHub**
