@@ -17,7 +17,7 @@ onMount(async () => {
 		if (!authenticated) {
 			// Redirect to login with return URL
 			const returnUrl = encodeURIComponent(window.location.pathname + window.location.search)
-			await goto(resolve(`/?redirect=${returnUrl}`))
+			await goto(`/?redirect=${returnUrl}`)
 		}
 		loading = false
 	}
