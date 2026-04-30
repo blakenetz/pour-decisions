@@ -17,6 +17,10 @@ let signupModalOpen = $state(false)
 onMount(async () => {
 	if (browser) {
 		const authUser = await getAuthUser()
+		if (authUser) {
+			await goto(resolve('/dashboard'))
+			return
+		}
 		user = authUser
 		loading = false
 	}
@@ -31,11 +35,8 @@ async function handleSignOut() {
 }
 
 function handleLoginSuccess() {
-	// Refresh user state after successful login
 	if (browser) {
-		getAuthUser().then((authUser) => {
-			user = authUser
-		})
+		goto(resolve('/dashboard'))
 	}
 }
 

@@ -5,6 +5,7 @@ import { goto } from '$app/navigation'
 import { resolve } from '$app/paths'
 import type { AuthUser } from '$lib/auth/auth'
 import { getAuthUser, signOutUser } from '$lib/auth/auth'
+import OvalButton from '$lib/components/actions/OvalButton.svelte'
 
 let user: AuthUser | null = $state(null)
 let loading = $state(true)
@@ -35,11 +36,15 @@ async function handleSignOut() {
 		{/if}
 	</header>
 
-	<main class="flex-1 flex items-center justify-center w-full max-w-2xl">
+	<main class="flex-1 flex flex-col items-center justify-center gap-12 w-full max-w-2xl">
 		{#if loading}
 			<p class="text-gray-500">Loading...</p>
 		{:else}
-			<p class="text-gray-500">Welcome! More coming soon.</p>
+			<p class="text-xl text-center">What would you like to do?</p>
+			<div class="flex flex-wrap items-center justify-center gap-16">
+				<OvalButton as="a" href="/tastings/new">Log a Tasting</OvalButton>
+				<OvalButton as="a" href="/dashboard/trends">View My Dashboard</OvalButton>
+			</div>
 		{/if}
 	</main>
 </section>
