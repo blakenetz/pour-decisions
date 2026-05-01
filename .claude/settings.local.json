@@ -10,7 +10,8 @@
       "Bash(pnpm biome:*)",
       "Bash(pnpm check:*)",
       "WebFetch(domain:svelte.dev)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(npx svelte-kit *)"
     ]
   },
   "enableAllProjectMcpServers": true,
