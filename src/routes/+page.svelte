@@ -1,35 +1,25 @@
 <script lang="ts">
-import { onMount } from 'svelte'
-import { browser } from '$app/environment'
+import { invalidateAll } from '$app/navigation'
 import { LoopLink, SquigglyLink } from '$lib'
 import tableSettingImage from '$lib/assets/table-setting.png'
-import { getAuthUser, signOutUser } from '$lib/auth/auth'
-import type { AuthUser } from '$lib/auth/auth'
+import { signOutUser } from '$lib/auth/auth'
 import LoginModal from '$lib/components/LoginModal.svelte'
 import SignupModal from '$lib/components/SignupModal.svelte'
 import OvalButton from '$lib/components/actions/OvalButton.svelte'
+import type { PageData } from './$types'
 
-let user: AuthUser | null = $state(null)
-let loading = $state(true)
+let { data }: { data: PageData } = $props()
+
 let loginModalOpen = $state(false)
 let signupModalOpen = $state(false)
 
-onMount(async () => {
-	if (browser) {
-		user = await getAuthUser()
-		loading = false
-	}
-})
-
 async function handleSignOut() {
 	await signOutUser()
-	user = null
+	await invalidateAll()
 }
 
-function handleLoginSuccess() {
-	if (browser) {
-		window.location.reload()
-	}
+async function handleLoginSuccess() {
+	await invalidateAll()
 }
 
 function openLoginModal() {
@@ -43,16 +33,12 @@ function openSignupModal() {
 }
 </script>
 
-{#if loading && browser}
-	<div class="flex items-center justify-center min-h-[100dvh]">
-		<p>Loading...</p>
-	</div>
-{:else if user}
+{#if data.user}
 	<section class="flex flex-col items-center min-h-[100dvh] p-4">
 		<header class="w-full max-w-2xl flex items-center justify-between py-4">
 			<h1 class="text-3xl font-bold">Pour Decisions</h1>
 			<div class="flex items-center gap-4">
-				<span class="text-sm text-gray-600">{user.username}</span>
+				<span class="text-sm text-gray-600">{data.user.username}</span>
 				<button onclick={handleSignOut} class="text-sm underline hover:text-gray-600">
 					Sign Out
 				</button>
@@ -78,41 +64,21 @@ function openSignupModal() {
 			/>
 		</div>
 		<div class="mt-8 mb-4 flex gap-4">
-			<LoopLink
-				as="button"
-				type="button"
-				onclick={() => {
-					openSignupModal();
-				}}
-			>
-				Sign Up
-			</LoopLink>
-			<SquigglyLink
-				as="button"
-				type="button"
-				onclick={() => {
-					openLoginModal();
-				}}
-			>
-				Login
-			</SquigglyLink>
+			<LoopLink as="button" type="button" onclick={openSignupModal}>Sign Up</LoopLink>
+			<SquigglyLink as="button" type="button" onclick={openLoginModal}>Login</SquigglyLink>
 		</div>
 	</section>
 
 	<LoginModal
 		open={loginModalOpen}
-		onclose={() => {
-			loginModalOpen = false;
-		}}
+		onclose={() => (loginModalOpen = false)}
 		onsuccess={handleLoginSuccess}
 		onswitchtosignup={openSignupModal}
 	/>
 
 	<SignupModal
 		open={signupModalOpen}
-		onclose={() => {
-			signupModalOpen = false;
-		}}
+		onclose={() => (signupModalOpen = false)}
 		onswitchtologin={openLoginModal}
 	/>
 {/if}

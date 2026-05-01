@@ -14,14 +14,12 @@ onMount(() => {
 	const error = page.url.searchParams.get('error')
 	const errorDescription = page.url.searchParams.get('error_description')
 	if (error) {
-		errorMsg = `An error occurred during sign in: ${errorDescription || error}`
+		errorMsg = `Sign in failed: ${errorDescription || error}`
 		setTimeout(() => goto('/'), 3000)
 		return
 	}
 
-	const provider = page.url.searchParams.get('provider')
-
-	if (provider === 'github') {
+	if (page.url.searchParams.get('provider') === 'github') {
 		handleGitHubCallback()
 		return
 	}
@@ -38,8 +36,7 @@ onMount(() => {
 			unsubscribe()
 			await syncSession()
 			await goto('/')
-		}
-		if (payload.event === 'signInWithRedirect_failure') {
+		} else if (payload.event === 'signInWithRedirect_failure') {
 			resolved = true
 			unsubscribe()
 			const data = payload.data as { error?: Error } | undefined
@@ -48,30 +45,28 @@ onMount(() => {
 		}
 	})
 
-	const pollAuth = async () => {
-		for (let i = 0; i < 10; i++) {
+	// Check if auth already completed before the Hub listener was set up
+	getCurrentUser()
+		.then(async () => {
 			if (resolved) return
-			try {
-				await getCurrentUser()
-				resolved = true
-				unsubscribe()
-				await syncSession()
-				await goto('/')
-				return
-			} catch {
-				await new Promise((r) => setTimeout(r, 500))
-			}
-		}
+			resolved = true
+			unsubscribe()
+			await syncSession()
+			await goto('/')
+		})
+		.catch(() => {
+			// Not yet authenticated — wait for Hub event
+		})
 
+	// Fallback timeout
+	setTimeout(() => {
 		if (!resolved) {
 			resolved = true
 			unsubscribe()
 			timedOut = true
 			errorMsg = 'Sign in took too long. Please try again.'
 		}
-	}
-
-	pollAuth()
+	}, 15_000)
 })
 
 async function handleGitHubCallback() {
