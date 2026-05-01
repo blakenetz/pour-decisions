@@ -1,68 +1,17 @@
 <script lang="ts">
-import { goto } from '$app/navigation'
-import { getAuthSession } from '$lib/auth/auth'
-import type { CreateTastingInput } from '$lib/types/tasting'
+import { enhance } from '$app/forms'
+import type { ActionData } from './$types'
 
 const BREW_METHODS = ['Espresso', 'Pour Over', 'French Press', 'Drip', 'Cold Brew', 'AeroPress']
 const SCALE = [1, 2, 3, 4, 5] as const
 
-let producer = $state('')
-let productName = $state('')
+let { form }: { form: ActionData } = $props()
+
 let brewMethod = $state('')
 let rating = $state(0)
 let acidity = $state(0)
 let bodyScore = $state(0)
-let freeText = $state('')
 let submitting = $state(false)
-let errorMsg = $state('')
-
-async function handleSubmit(e: SubmitEvent) {
-	e.preventDefault()
-	submitting = true
-	errorMsg = ''
-
-	try {
-		const session = await getAuthSession()
-		const token = session?.tokens?.accessToken?.toString()
-		if (!token) throw new Error('Not authenticated')
-
-		const details = {
-			...(producer && { producer }),
-			...(productName && { productName }),
-			...(brewMethod && { brewMethod })
-		}
-
-		const tastingNotes = {
-			...(rating && { overallRating: rating }),
-			...(acidity && { acidity }),
-			...(bodyScore && { body: bodyScore }),
-			...(freeText && { freeText })
-		}
-
-		const input: CreateTastingInput = {
-			beverageType: 'coffee',
-			...(Object.keys(details).length && { details }),
-			...(Object.keys(tastingNotes).length && { notes: tastingNotes })
-		}
-
-		const res = await fetch('/api/tastings', {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				Authorization: `Bearer ${token}`
-			},
-			body: JSON.stringify(input)
-		})
-
-		if (!res.ok) throw new Error('Failed to save tasting')
-
-		await goto('/')
-	} catch (err) {
-		errorMsg = err instanceof Error ? err.message : 'Something went wrong'
-	} finally {
-		submitting = false
-	}
-}
 </script>
 
 <section class="min-h-[100dvh] p-6 flex flex-col max-w-lg mx-auto">
@@ -71,14 +20,30 @@ async function handleSubmit(e: SubmitEvent) {
 		<h1 class="text-5xl mt-3">Log a Tasting</h1>
 	</header>
 
-	<form onsubmit={handleSubmit} class="flex flex-col gap-8 flex-1">
+	<form
+		method="POST"
+		use:enhance={() => {
+			submitting = true
+			return async ({ update }) => {
+				await update()
+				submitting = false
+			}
+		}}
+		class="flex flex-col gap-8 flex-1"
+	>
+		<!-- Hidden inputs for custom control values -->
+		<input type="hidden" name="brewMethod" value={brewMethod} />
+		<input type="hidden" name="rating" value={rating} />
+		<input type="hidden" name="acidity" value={acidity} />
+		<input type="hidden" name="body" value={bodyScore} />
+
 		<div class="flex flex-col gap-6">
 			<div class="flex flex-col gap-1">
 				<label for="producer" class="text-xs uppercase tracking-widest text-gray-500">Roaster</label>
 				<input
 					id="producer"
+					name="producer"
 					type="text"
-					bind:value={producer}
 					placeholder="e.g. Blue Bottle"
 					class="border-b border-dark-ink bg-transparent py-2 focus:outline-none placeholder:text-gray-300"
 				/>
@@ -88,8 +53,8 @@ async function handleSubmit(e: SubmitEvent) {
 				<label for="productName" class="text-xs uppercase tracking-widest text-gray-500">Coffee Name</label>
 				<input
 					id="productName"
+					name="productName"
 					type="text"
-					bind:value={productName}
 					placeholder="e.g. Ethiopia Yirgacheffe"
 					class="border-b border-dark-ink bg-transparent py-2 focus:outline-none placeholder:text-gray-300"
 				/>
@@ -178,15 +143,15 @@ async function handleSubmit(e: SubmitEvent) {
 			<label for="freeText" class="text-xs uppercase tracking-widest text-gray-500">Notes</label>
 			<textarea
 				id="freeText"
-				bind:value={freeText}
+				name="freeText"
 				rows="4"
 				placeholder="What stood out? Any flavor notes..."
 				class="border-b border-dark-ink bg-transparent py-2 resize-none focus:outline-none placeholder:text-gray-300"
 			></textarea>
 		</div>
 
-		{#if errorMsg}
-			<p class="text-red-500 text-sm">{errorMsg}</p>
+		{#if form?.error}
+			<p class="text-red-500 text-sm">{form.error}</p>
 		{/if}
 
 		<div class="flex justify-end mt-auto pb-8">

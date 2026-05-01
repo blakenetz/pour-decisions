@@ -22,6 +22,35 @@ A palate analytics app that helps users track and understand their taste prefere
 
 ---
 
+## SvelteKit Patterns
+
+This project follows a **server-first** approach. When in doubt, resolve data and auth on the server and pass it down — reach for client-side JS only for interactivity.
+
+### Data loading
+- Use `+page.server.ts` or `+layout.server.ts` `load` functions to fetch data. Return it and access it via the `data` prop (`let { data }: { data: PageData } = $props()`).
+- Never use `onMount` + a client-side fetch to load data that could be loaded server-side.
+- Layout data flows down automatically — child pages get parent layout data merged into their `PageData` type.
+
+### Auth
+- `hooks.server.ts` sets `event.locals.user` on every request by reading the `session` HttpOnly cookie and verifying the Cognito JWT.
+- Protected routes use `(protected)/+layout.server.ts` which checks `locals.user` and throws `redirect(302, '/')` if absent — no client-side auth guard needed.
+- Pages access the current user via `data.user`, not via `getAuthUser()` in `onMount`.
+- After sign-in, call `syncSession()` (sets the cookie) then `invalidateAll()` (re-runs load functions) — never `window.location.reload()`.
+- After sign-out, call `invalidateAll()` from public pages or `goto('/')` from protected pages.
+
+### Forms
+- Page forms use `+page.server.ts` `actions` + `use:enhance` on the `<form method="POST">` element.
+- The action reads `locals.user.userId` directly — no Bearer token or `getAuthSession()` needed.
+- Custom interactive controls (pill buttons, scale selectors) sync their state into hidden inputs so FormData captures them.
+- `/api/*` routes are for programmatic/external API access only, not for form submissions from pages.
+
+### `onMount` is acceptable only for browser-only APIs
+- Amplify initialisation (`initAmplify()`)
+- `navigator` APIs (online/offline, service worker)
+- DOM focus management and portal behaviour in UI components
+
+---
+
 ## Svelte MCP Tools
 
 You are able to use the Svelte MCP server, where you have access to comprehensive Svelte 5 and SvelteKit documentation. Here's how to use the available tools effectively:
