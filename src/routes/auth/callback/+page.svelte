@@ -3,62 +3,51 @@ import { getCurrentUser } from 'aws-amplify/auth'
 import { Hub } from 'aws-amplify/utils'
 import { onMount } from 'svelte'
 import { goto } from '$app/navigation'
-import { resolve } from '$app/paths'
 import { page } from '$app/state'
 import { initAmplify } from '$lib/auth/amplifyClient'
+import { syncSession } from '$lib/auth/auth'
 
 let errorMsg = $state('')
 let timedOut = $state(false)
 
 onMount(() => {
-	console.log('Auth callback mounted. URL:', page.url.toString())
-
-	// Check for error params in the URL (Cognito redirects with these on failure)
 	const error = page.url.searchParams.get('error')
 	const errorDescription = page.url.searchParams.get('error_description')
 	if (error) {
-		console.error('URL error params:', { error, errorDescription })
 		errorMsg = `An error occurred during sign in: ${errorDescription || error}`
-		setTimeout(() => goto(resolve('/')), 3000)
+		setTimeout(() => goto('/'), 3000)
 		return
 	}
 
 	const provider = page.url.searchParams.get('provider')
 
-	// GitHub uses a custom OAuth flow (not Cognito OIDC)
 	if (provider === 'github') {
 		handleGitHubCallback()
 		return
 	}
 
-	// For other providers (Google), use Amplify's Hub events
 	initAmplify()
 
 	let resolved = false
 
 	const unsubscribe = Hub.listen('auth', async ({ payload }) => {
-		console.log('Hub auth event:', payload.event, payload)
 		if (resolved) return
 
 		if (payload.event === 'signInWithRedirect') {
 			resolved = true
 			unsubscribe()
-			await goto(resolve('/dashboard'))
+			await syncSession()
+			await goto('/')
 		}
 		if (payload.event === 'signInWithRedirect_failure') {
 			resolved = true
 			unsubscribe()
-			console.error('signInWithRedirect_failure payload:', JSON.stringify(payload, null, 2))
 			const data = payload.data as { error?: Error } | undefined
-			if (data?.error) {
-				console.error('Auth failure error:', data.error)
-			}
 			errorMsg = data?.error?.message || 'Sign in failed. Please try again.'
-			setTimeout(() => goto(resolve('/')), 3000)
+			setTimeout(() => goto('/'), 3000)
 		}
 	})
 
-	// Poll for auth completion in case Hub event was missed
 	const pollAuth = async () => {
 		for (let i = 0; i < 10; i++) {
 			if (resolved) return
@@ -66,15 +55,14 @@ onMount(() => {
 				await getCurrentUser()
 				resolved = true
 				unsubscribe()
-				await goto(resolve('/dashboard'))
+				await syncSession()
+				await goto('/')
 				return
-			} catch (err) {
-				console.error(`Poll attempt ${i + 1} failed:`, err)
+			} catch {
 				await new Promise((r) => setTimeout(r, 500))
 			}
 		}
 
-		// After 5 seconds of polling with no auth, time out
 		if (!resolved) {
 			resolved = true
 			unsubscribe()
@@ -90,16 +78,12 @@ async function handleGitHubCallback() {
 	try {
 		const { completeGitHubOAuth } = await import('$lib/auth/github')
 		await completeGitHubOAuth()
-		await goto(resolve('/dashboard'))
+		await syncSession()
+		await goto('/')
 	} catch (err) {
-		console.error('GitHub OAuth completion failed:', err)
 		errorMsg = err instanceof Error ? err.message : 'GitHub sign in failed. Please try again.'
 		timedOut = true
 	}
-}
-
-function goHome() {
-	goto(resolve('/'))
 }
 </script>
 
@@ -107,7 +91,7 @@ function goHome() {
 	{#if errorMsg}
 		<p class="text-red-600 text-center">{errorMsg}</p>
 		{#if timedOut}
-			<button onclick={goHome} class="text-sm underline hover:text-gray-600">
+			<button onclick={() => goto('/')} class="text-sm underline hover:text-gray-600">
 				Back to home
 			</button>
 		{:else}

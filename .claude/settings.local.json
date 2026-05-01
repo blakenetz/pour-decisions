@@ -8,7 +8,9 @@
       "WebSearch",
       "mcp__svelte__list-sections",
       "Bash(pnpm biome:*)",
-      "Bash(pnpm check:*)"
+      "Bash(pnpm check:*)",
+      "WebFetch(domain:svelte.dev)",
+      "Bash(npx tsc *)"
     ]
   },
   "enableAllProjectMcpServers": true,

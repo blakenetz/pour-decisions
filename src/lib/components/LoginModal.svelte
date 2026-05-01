@@ -2,7 +2,7 @@
 import { onDestroy, onMount } from 'svelte'
 import { browser } from '$app/environment'
 import { initAmplify } from '$lib/auth/amplifyClient'
-import { signInUser, signInWithOAuth } from '$lib/auth/auth'
+import { signInUser, signInWithOAuth, syncSession } from '$lib/auth/auth'
 import Modal from './Modal.svelte'
 
 let {
@@ -65,7 +65,8 @@ async function handleLogin(e: Event) {
 			return
 		}
 
-		// Successfully signed in
+		// Sync session cookie before triggering success so server sees the auth on reload
+		await syncSession()
 		onsuccess?.()
 		handleClose()
 	} catch (err: unknown) {
