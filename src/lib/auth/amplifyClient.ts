@@ -20,7 +20,7 @@ export function initAmplify() {
 		return
 	}
 
-	const config = {
+	Amplify.configure({
 		Auth: {
 			Cognito: {
 				userPoolId,
@@ -40,8 +40,6 @@ export function initAmplify() {
 				})
 			}
 		}
-	}
-
-	Amplify.configure(config)
+	})
 	configured = true
 }

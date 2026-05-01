@@ -2,6 +2,23 @@ import { fetchAuthSession, getCurrentUser, signIn, signOut } from 'aws-amplify/a
 import { browser } from '$app/environment'
 import { initAmplify } from './amplifyClient'
 
+export async function syncSession(): Promise<void> {
+	if (!browser) return
+	try {
+		initAmplify()
+		const session = await fetchAuthSession()
+		const token = session.tokens?.accessToken?.toString()
+		if (!token) return
+		await fetch('/api/auth/session', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ token })
+		})
+	} catch {
+		// best-effort — client-side auth still works without the cookie
+	}
+}
+
 export interface AuthUser {
 	username: string
 	userId: string
@@ -67,6 +84,7 @@ export async function signOutUser() {
 	try {
 		initAmplify()
 		await signOut()
+		await fetch('/api/auth/session', { method: 'DELETE' })
 	} catch (error) {
 		console.error('Error signing out:', error)
 		throw error

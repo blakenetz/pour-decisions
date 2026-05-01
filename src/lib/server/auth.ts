@@ -1,4 +1,5 @@
 import { CognitoJwtVerifier } from 'aws-jwt-verify'
+import type { Cookies } from '@sveltejs/kit'
 import { env as publicEnv } from '$env/dynamic/public'
 
 let verifier: ReturnType<typeof CognitoJwtVerifier.create> | null = null
@@ -16,6 +17,26 @@ function getVerifier() {
 		})
 	}
 	return verifier
+}
+
+export async function verifyAccessToken(
+	token: string
+): Promise<{ userId: string; username: string } | null> {
+	try {
+		const payload = await getVerifier().verify(token)
+		const username = String(payload['username'] ?? payload.sub)
+		return { userId: payload.sub, username }
+	} catch {
+		return null
+	}
+}
+
+export async function getUserFromSessionCookie(
+	cookies: Cookies
+): Promise<{ userId: string; username: string } | null> {
+	const token = cookies.get('session')
+	if (!token) return null
+	return verifyAccessToken(token)
 }
 
 export async function getUserIdFromRequest(request: Request): Promise<string> {

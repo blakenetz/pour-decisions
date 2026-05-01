@@ -1,42 +1,34 @@
 <script lang="ts">
 import { onMount } from 'svelte'
 import { browser } from '$app/environment'
-import { goto } from '$app/navigation'
-import { resolve } from '$app/paths'
 import { LoopLink, SquigglyLink } from '$lib'
 import tableSettingImage from '$lib/assets/table-setting.png'
 import { getAuthUser, signOutUser } from '$lib/auth/auth'
+import type { AuthUser } from '$lib/auth/auth'
 import LoginModal from '$lib/components/LoginModal.svelte'
 import SignupModal from '$lib/components/SignupModal.svelte'
+import OvalButton from '$lib/components/actions/OvalButton.svelte'
 
-let user: { username: string } | null = $state(null)
+let user: AuthUser | null = $state(null)
 let loading = $state(true)
 let loginModalOpen = $state(false)
 let signupModalOpen = $state(false)
 
 onMount(async () => {
 	if (browser) {
-		const authUser = await getAuthUser()
-		if (authUser) {
-			await goto(resolve('/dashboard'))
-			return
-		}
-		user = authUser
+		user = await getAuthUser()
 		loading = false
 	}
 })
 
 async function handleSignOut() {
-	if (browser) {
-		await signOutUser()
-		user = null
-		await goto(resolve('/'))
-	}
+	await signOutUser()
+	user = null
 }
 
 function handleLoginSuccess() {
 	if (browser) {
-		goto(resolve('/dashboard'))
+		window.location.reload()
 	}
 }
 
@@ -51,24 +43,41 @@ function openSignupModal() {
 }
 </script>
 
-<section class="flex flex-col items-center min-h-[100dvh] max-h-[100dvh] p-4">
-	<h1 class="text-6xl mb-8">Pour Decisions</h1>
-	<div class="flex-1 flex items-center w-full">
-		<img
-			src={tableSettingImage}
-			alt="Table Setting"
-			class="max-h-full max-w-full w-auto h-auto object-contain mx-auto"
-		/>
+{#if loading && browser}
+	<div class="flex items-center justify-center min-h-[100dvh]">
+		<p>Loading...</p>
 	</div>
-	<div class="mt-8 mb-4 flex gap-4">
-		{#if loading}
-			<p class="text-sm">Loading...</p>
-		{:else if user}
-			<div class="flex flex-col items-center gap-2">
-				<p class="text-sm">Signed in as {user.username}</p>
-				<button onclick={handleSignOut} class="text-sm underline">Sign Out</button>
+{:else if user}
+	<section class="flex flex-col items-center min-h-[100dvh] p-4">
+		<header class="w-full max-w-2xl flex items-center justify-between py-4">
+			<h1 class="text-3xl font-bold">Pour Decisions</h1>
+			<div class="flex items-center gap-4">
+				<span class="text-sm text-gray-600">{user.username}</span>
+				<button onclick={handleSignOut} class="text-sm underline hover:text-gray-600">
+					Sign Out
+				</button>
 			</div>
-		{:else}
+		</header>
+
+		<main class="flex-1 flex flex-col items-center justify-center gap-12 w-full max-w-2xl">
+			<p class="text-xl text-center">What would you like to do?</p>
+			<div class="flex flex-wrap items-center justify-center gap-16">
+				<OvalButton as="a" href="/tastings/new">Log a Tasting</OvalButton>
+				<OvalButton as="a" href="/dashboard">View My Dashboard</OvalButton>
+			</div>
+		</main>
+	</section>
+{:else}
+	<section class="flex flex-col items-center min-h-[100dvh] max-h-[100dvh] p-4">
+		<h1 class="text-6xl mb-8">Pour Decisions</h1>
+		<div class="flex-1 flex items-center w-full">
+			<img
+				src={tableSettingImage}
+				alt="Table Setting"
+				class="max-h-full max-w-full w-auto h-auto object-contain mx-auto"
+			/>
+		</div>
+		<div class="mt-8 mb-4 flex gap-4">
 			<LoopLink
 				as="button"
 				type="button"
@@ -87,23 +96,23 @@ function openSignupModal() {
 			>
 				Login
 			</SquigglyLink>
-		{/if}
-	</div>
-</section>
+		</div>
+	</section>
 
-<LoginModal
-	open={loginModalOpen}
-	onclose={() => {
-		loginModalOpen = false;
-	}}
-	onsuccess={handleLoginSuccess}
-	onswitchtosignup={openSignupModal}
-/>
+	<LoginModal
+		open={loginModalOpen}
+		onclose={() => {
+			loginModalOpen = false;
+		}}
+		onsuccess={handleLoginSuccess}
+		onswitchtosignup={openSignupModal}
+	/>
 
-<SignupModal
-	open={signupModalOpen}
-	onclose={() => {
-		signupModalOpen = false;
-	}}
-	onswitchtologin={openLoginModal}
-/>
+	<SignupModal
+		open={signupModalOpen}
+		onclose={() => {
+			signupModalOpen = false;
+		}}
+		onswitchtologin={openLoginModal}
+	/>
+{/if}

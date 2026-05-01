@@ -1,16 +1,20 @@
 {
-	"permissions": {
-		"allow": [
-			"mcp__svelte__svelte-autofixer",
-			"Bash(npx svelte-check:*)",
-			"Bash(npx eslint:*)",
-			"mcp__svelte__get-documentation",
-			"WebSearch",
-			"mcp__svelte__list-sections",
-			"Bash(pnpm biome:*)",
-			"Bash(pnpm check:*)"
-		]
-	},
-	"enableAllProjectMcpServers": true,
-	"enabledMcpjsonServers": ["svelte"]
+  "permissions": {
+    "allow": [
+      "mcp__svelte__svelte-autofixer",
+      "Bash(npx svelte-check:*)",
+      "Bash(npx eslint:*)",
+      "mcp__svelte__get-documentation",
+      "WebSearch",
+      "mcp__svelte__list-sections",
+      "Bash(pnpm biome:*)",
+      "Bash(pnpm check:*)",
+      "WebFetch(domain:svelte.dev)",
+      "Bash(npx tsc *)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "svelte"
+  ]
 }
