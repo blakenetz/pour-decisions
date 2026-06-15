@@ -13,7 +13,9 @@
       "Bash(npx tsc *)",
       "Bash(npx svelte-kit *)",
       "Bash(grep -rn 'onMount\\\\|window\\\\.location\\\\|resolve.*$app/paths\\\\|getAuthUser\\\\|getAuthSession' /Users/blakenetzeband/workspace/pour-decisions/src '--include=*.svelte' '--include=*.ts')",
-      "Bash(grep -v \"node_modules\\\\|\\\\.d\\\\.ts\\\\|auth\\\\.ts$\\\\|amplifyClient\")"
+      "Bash(grep -v \"node_modules\\\\|\\\\.d\\\\.ts\\\\|auth\\\\.ts$\\\\|amplifyClient\")",
+      "Bash(grep -rn 'lib/assets\\\\|$lib/assets' src)",
+      "Bash(git check-ignore *)"
     ]
   },
   "enableAllProjectMcpServers": true,
