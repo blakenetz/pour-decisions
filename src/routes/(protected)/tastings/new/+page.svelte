@@ -7,7 +7,6 @@ const SCALE = [1, 2, 3, 4, 5] as const
 
 let { form }: { form: ActionData } = $props()
 
-let brewMethod = $state('')
 let rating = $state(0)
 let acidity = $state(0)
 let bodyScore = $state(0)
@@ -32,7 +31,6 @@ let submitting = $state(false)
 		class="flex flex-col gap-8 flex-1"
 	>
 		<!-- Hidden inputs for custom control values -->
-		<input type="hidden" name="brewMethod" value={brewMethod} />
 		<input type="hidden" name="rating" value={rating} />
 		<input type="hidden" name="acidity" value={acidity} />
 		<input type="hidden" name="body" value={bodyScore} />
@@ -61,23 +59,18 @@ let submitting = $state(false)
 			</div>
 		</div>
 
-		<div class="flex flex-col gap-3">
-			<span class="text-xs uppercase tracking-widest text-gray-500">Brew Method</span>
-			<div class="flex flex-wrap gap-2">
+		<div class="flex flex-col gap-1">
+			<label for="brewMethod" class="text-xs uppercase tracking-widest text-gray-500">Brew Method</label>
+			<select
+				id="brewMethod"
+				name="brewMethod"
+				class="border-b border-dark-ink bg-transparent py-2 focus:outline-none"
+			>
+				<option value="" disabled selected>Select a method</option>
 				{#each BREW_METHODS as method (method)}
-					<button
-						type="button"
-						onclick={() => (brewMethod = brewMethod === method ? '' : method)}
-						class={`px-3 py-1 rounded-full border text-sm transition-colors ${
-							brewMethod === method
-								? 'bg-dark-ink text-off-white border-dark-ink'
-								: 'bg-transparent text-dark-ink border-dark-ink'
-						}`}
-					>
-						{method}
-					</button>
+					<option value={method}>{method}</option>
 				{/each}
-			</div>
+			</select>
 		</div>
 
 		<div class="flex flex-col gap-3">
