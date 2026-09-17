@@ -1,3 +1,7 @@
+minimumReleaseAgeExclude:
+  - '@aws-sdk/client-cognito-identity-provider@3.1135.0'
+  - '@aws-sdk/client-dynamodb@3.1135.0'
+  - '@aws-sdk/lib-dynamodb@3.1135.0'
 onlyBuiltDependencies:
   - esbuild
   - '@tailwindcss/oxide'
