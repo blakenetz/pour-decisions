@@ -79,7 +79,9 @@ const flowers = [
 	</section>
 {:else}
 	<section class="flex flex-col items-center min-h-[100dvh] max-h-[100dvh] p-4">
-		<h1 class="text-6xl mb-8">Pour Decisions</h1>
+		<div class="mb-8 text-center">
+			<h1 class="text-6xl">Welcome.<br />Let's make some<br /><em>Pour Decisions</em></h1>
+		</div>
 		<div class="flex-1 flex items-center w-full">
 			<img
 				src={tableSettingImage}
