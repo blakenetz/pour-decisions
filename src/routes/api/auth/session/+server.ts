@@ -1,6 +1,6 @@
-import { dev } from '$app/environment'
 import { error, json } from '@sveltejs/kit'
-import { verifyAccessToken } from '$lib/server/auth'
+import { dev } from '$app/environment'
+import { verifySessionToken } from '$lib/server/auth'
 import type { RequestHandler } from './$types'
 
 const COOKIE_OPTIONS = {
@@ -8,7 +8,7 @@ const COOKIE_OPTIONS = {
 	sameSite: 'lax' as const,
 	secure: !dev,
 	path: '/',
-	maxAge: 60 * 60 // 1 hour — matches Cognito access token default expiry
+	maxAge: 60 * 60 // 1 hour — matches Cognito ID token default expiry
 }
 
 export const POST: RequestHandler = async ({ request, cookies }) => {
@@ -22,7 +22,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 
 	if (!token) error(400, 'Missing token')
 
-	const user = await verifyAccessToken(token)
+	const user = await verifySessionToken(token)
 	if (!user) error(401, 'Invalid token')
 
 	cookies.set('session', token, COOKIE_OPTIONS)

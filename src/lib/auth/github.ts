@@ -1,5 +1,6 @@
 import { signIn } from 'aws-amplify/auth'
 import { initAmplify } from './amplifyClient'
+import { clearStaleSession } from './auth'
 
 export function startGitHubOAuth() {
 	window.location.href = '/api/auth/github'
@@ -15,5 +16,6 @@ export async function completeGitHubOAuth() {
 	const { email, password } = await res.json()
 
 	initAmplify()
+	await clearStaleSession()
 	await signIn({ username: email, password })
 }
