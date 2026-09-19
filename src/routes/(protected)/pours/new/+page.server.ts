@@ -1,5 +1,5 @@
-import { fail, redirect } from '@sveltejs/kit'
 import { PutCommand } from '@aws-sdk/lib-dynamodb'
+import { fail, redirect } from '@sveltejs/kit'
 import { ulid } from 'ulid'
 import { db, getTableName } from '$lib/server/db'
 import type { TastingDetails, TastingEntry, TastingNotes } from '$lib/types/tasting'
@@ -37,7 +37,7 @@ export const actions: Actions = {
 		try {
 			await db.send(new PutCommand({ TableName: getTableName(), Item: entry }))
 		} catch {
-			return fail(500, { error: 'Failed to save tasting. Please try again.' })
+			return fail(500, { error: 'Failed to save pour. Please try again.' })
 		}
 
 		redirect(303, '/')

@@ -16,7 +16,7 @@ let submitting = $state(false)
 <section class="min-h-[100dvh] p-6 flex flex-col max-w-lg mx-auto">
 	<header class="mb-10">
 		<a href="/" class="text-sm text-gray-500 hover:text-dark-ink">← Back</a>
-		<h1 class="text-5xl mt-3">Log a Tasting</h1>
+		<h1 class="text-5xl mt-3">Log a Pour</h1>
 	</header>
 
 	<form
@@ -153,7 +153,7 @@ let submitting = $state(false)
 				disabled={submitting}
 				class="px-8 py-3 bg-dark-ink text-off-white text-lg disabled:opacity-50 hover:bg-charcoal transition-colors"
 			>
-				{submitting ? 'Saving...' : 'Save Tasting'}
+				{submitting ? 'Saving...' : 'Save Pour'}
 			</button>
 		</div>
 	</form>

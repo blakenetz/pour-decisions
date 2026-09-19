@@ -1,7 +1,6 @@
 <script lang="ts">
 import { invalidateAll } from '$app/navigation'
 import { LoopLink, SquigglyLink } from '$lib'
-import tableSettingImage from '$lib/assets/table-setting.png'
 import flower170 from '$lib/assets/hand-drawn-flowers/hand-drawn-_g170.png'
 import flower171 from '$lib/assets/hand-drawn-flowers/hand-drawn-_g171.png'
 import flower172 from '$lib/assets/hand-drawn-flowers/hand-drawn-_g172.png'
@@ -9,10 +8,11 @@ import flower174 from '$lib/assets/hand-drawn-flowers/hand-drawn-_g174.png'
 import flower182 from '$lib/assets/hand-drawn-flowers/hand-drawn-_g182.png'
 import flower184 from '$lib/assets/hand-drawn-flowers/hand-drawn-_g184.png'
 import flower187 from '$lib/assets/hand-drawn-flowers/hand-drawn-_g187.png'
+import tableLegsImage from '$lib/assets/table-legs.png'
+import tableSettingImage from '$lib/assets/table-setting.png'
 import { signOutUser } from '$lib/auth/auth'
 import LoginModal from '$lib/components/LoginModal.svelte'
 import SignupModal from '$lib/components/SignupModal.svelte'
-import OvalButton from '$lib/components/actions/OvalButton.svelte'
 import type { PageData } from './$types'
 
 let { data }: { data: PageData } = $props()
@@ -52,12 +52,6 @@ const flowers = [
 </script>
 
 {#if data.user}
-	<div class="flowers" aria-hidden="true">
-		{#each flowers as flower, i (i)}
-			<img src={flower.src} alt="" style="left: {flower.left}; width: {flower.width};" />
-		{/each}
-	</div>
-
 	<section class="flex flex-col items-center min-h-[100dvh] p-4">
 		<header class="w-full max-w-2xl flex items-center justify-between py-4">
 			<h1 class="text-3xl font-bold">Pour Decisions</h1>
@@ -69,12 +63,13 @@ const flowers = [
 			</div>
 		</header>
 
-		<main class="flex-1 flex flex-col items-center justify-center gap-12 w-full max-w-2xl">
-			<p class="text-xl text-center">What would you like to do?</p>
-			<div class="flex flex-wrap items-center justify-center gap-16">
-				<OvalButton as="a" href="/tastings/new">Log a Tasting</OvalButton>
-				<OvalButton as="a" href="/dashboard">View My Dashboard</OvalButton>
+		<main class="flex-1 flex flex-col items-center justify-center gap-6 w-full max-w-2xl">
+			<img src={tableLegsImage} alt="" aria-hidden="true" class="h-96 w-auto" />
+			<div class="text-center">
+				<h2 class="text-3xl">No pours yet.</h2>
+				<p class="text-gray-500 mt-1">Log your first pour to get started.</p>
 			</div>
+			<LoopLink as="a" href="/pours/new">Log a Pour</LoopLink>
 		</main>
 	</section>
 {:else}
@@ -82,12 +77,8 @@ const flowers = [
 		<div class="mb-8 text-center">
 			<h1 class="text-6xl">Welcome.<br />Let's make some<br /><em>Pour Decisions</em></h1>
 		</div>
-		<div class="flex-1 flex items-center w-full">
-			<img
-				src={tableSettingImage}
-				alt="Table Setting"
-				class="max-h-full max-w-full w-auto h-auto object-contain mx-auto"
-			/>
+		<div class="flex-1 flex items-center justify-center w-full">
+			<img src={tableSettingImage} alt="Table Setting" class="h-96 w-auto" />
 		</div>
 		<div class="mt-8 mb-4 flex gap-4">
 			<LoopLink as="button" type="button" onclick={openSignupModal}>Sign Up</LoopLink>
