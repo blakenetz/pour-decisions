@@ -2,7 +2,12 @@ import { PutCommand } from '@aws-sdk/lib-dynamodb'
 import { fail, redirect } from '@sveltejs/kit'
 import { ulid } from 'ulid'
 import { db, getTableName } from '$lib/server/db'
-import { createTastingInputSchema, type TastingDetails, type TastingEntry, type TastingNotes } from '$lib/types/tasting'
+import {
+	createTastingInputSchema,
+	type TastingDetails,
+	type TastingEntry,
+	type TastingNotes
+} from '$lib/types/tasting'
 import type { Actions } from './$types'
 
 function str(data: FormData, key: string): string | undefined {

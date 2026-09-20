@@ -1,6 +1,11 @@
 import { parseArgs } from 'node:util'
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
-import { DeleteCommand, DynamoDBDocumentClient, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb'
+import {
+	DeleteCommand,
+	DynamoDBDocumentClient,
+	PutCommand,
+	QueryCommand
+} from '@aws-sdk/lib-dynamodb'
 import { ulid } from 'ulid'
 import { createTastingInputSchema, type TastingEntry } from '../src/lib/types/tasting'
 
@@ -16,7 +21,13 @@ if (!tableName) throw new Error('DYNAMODB_TABLE is not configured')
 const client = new DynamoDBClient({ region: process.env.PUBLIC_AWS_REGION || 'us-west-1' })
 const db = DynamoDBDocumentClient.from(client)
 
-const ROASTERS = ['Blue Bottle', 'Intelligentsia', 'Stumptown', 'Counter Culture', 'Onyx Coffee Lab']
+const ROASTERS = [
+	'Blue Bottle',
+	'Intelligentsia',
+	'Stumptown',
+	'Counter Culture',
+	'Onyx Coffee Lab'
+]
 const REGIONS = [
 	'Yirgacheffe, Ethiopia',
 	'Huehuetenango, Guatemala',
@@ -162,7 +173,9 @@ async function main() {
 	if (values.zero || values.low || values.high) {
 		const missing = ['zero', 'low', 'high'].filter((key) => !values[key as 'zero' | 'low' | 'high'])
 		if (missing.length > 0) {
-			console.error(`Tiered mode requires --zero, --low, and --high. Missing: ${missing.join(', ')}`)
+			console.error(
+				`Tiered mode requires --zero, --low, and --high. Missing: ${missing.join(', ')}`
+			)
 			process.exit(1)
 		}
 
