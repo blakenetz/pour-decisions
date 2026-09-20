@@ -5,25 +5,59 @@ import { db, getTableName } from '$lib/server/db'
 import type { TastingDetails, TastingEntry, TastingNotes } from '$lib/types/tasting'
 import type { Actions } from './$types'
 
+function str(data: FormData, key: string): string | undefined {
+	return data.get(key)?.toString().trim() || undefined
+}
+
+function num(data: FormData, key: string): number | undefined {
+	return Number(data.get(key)) || undefined
+}
+
 export const actions: Actions = {
 	default: async ({ request, locals }) => {
 		if (!locals.user) return fail(401, { error: 'Unauthorized' })
 
 		const data = await request.formData()
 
-		const producer = data.get('producer')?.toString().trim() || undefined
-		const productName = data.get('productName')?.toString().trim() || undefined
-		const brewMethod = data.get('brewMethod')?.toString().trim() || undefined
-		const overallRating = Number(data.get('rating')) || undefined
-		const acidity = Number(data.get('acidity')) || undefined
-		const body = Number(data.get('body')) || undefined
-		const freeText = data.get('freeText')?.toString().trim() || undefined
+		const details: TastingDetails = {
+			producer: str(data, 'producer'),
+			productName: str(data, 'productName'),
+			region: str(data, 'region'),
+			roastLevel: num(data, 'roastLevel'),
+			roasterNotes: str(data, 'roasterNotes')
+				?.split(',')
+				.map((tag) => tag.trim())
+				.filter(Boolean),
+			brewMethod: str(data, 'brewMethod'),
+			grindSize: str(data, 'grindSize'),
+			coffeeGrams: num(data, 'coffeeGrams'),
+			waterGrams: num(data, 'waterGrams'),
+			waterTempF: num(data, 'waterTempF'),
+			roastDate: str(data, 'roastDate'),
+			brewDate: str(data, 'brewDate')
+		}
 
-		const details: TastingDetails = { producer, productName, brewMethod }
-		const notes: TastingNotes = { overallRating, acidity, body, freeText }
+		const notes: TastingNotes = {
+			aromaIntensity: num(data, 'aromaIntensity'),
+			aromaClarity: num(data, 'aromaClarity'),
+			aromaNotes: str(data, 'aromaNotes'),
+			flavorComplexity: num(data, 'flavorComplexity'),
+			flavorSweetness: num(data, 'flavorSweetness'),
+			flavorNotes: str(data, 'flavorNotes'),
+			acidityIntensity: num(data, 'acidityIntensity'),
+			acidityQuality: num(data, 'acidityQuality'),
+			acidityNotes: str(data, 'acidityNotes'),
+			bodyWeight: num(data, 'bodyWeight'),
+			bodyTactile: num(data, 'bodyTactile'),
+			bodyNotes: str(data, 'bodyNotes'),
+			finishFlavor: num(data, 'finishFlavor'),
+			finishLength: num(data, 'finishLength'),
+			finishNotes: str(data, 'finishNotes'),
+			freeText: str(data, 'freeText')
+		}
 
-		const hasDetails = Object.values(details).some(Boolean)
-		const hasNotes = Object.values(notes).some(Boolean)
+		const hasDetails = Object.values(details).some((v) => v !== undefined)
+		const hasNotes = Object.values(notes).some((v) => v !== undefined)
 
 		const entry: TastingEntry = {
 			userId: locals.user.userId,
