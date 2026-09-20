@@ -1,0 +1,23 @@
+{
+	"name": "pour-decisions-infra",
+	"description": "CDK infrastructure-as-code for already-provisioned pour-decisions AWS resources.",
+	"private": true,
+	"version": "0.0.1",
+	"type": "module",
+	"scripts": {
+		"synth": "cdk synth",
+		"diff": "cdk diff",
+		"deploy": "cdk deploy",
+		"import": "cdk import"
+	},
+	"dependencies": {
+		"aws-cdk-lib": "^2",
+		"constructs": "^10"
+	},
+	"devDependencies": {
+		"@types/node": "^22",
+		"aws-cdk": "^2",
+		"tsx": "^4",
+		"typescript": "^5"
+	}
+}

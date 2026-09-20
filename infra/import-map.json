@@ -1,0 +1,24 @@
+{
+	"TastingsTable2E3F22A3": {
+		"TableName": "pour-decisions-tastings"
+	},
+	"UserPool6BA7E5F2": {
+		"UserPoolId": "us-west-1_CfmKBSS3p"
+	},
+	"GoogleIdentityProvider5AA1A9DD": {
+		"UserPoolId": "us-west-1_CfmKBSS3p",
+		"ProviderName": "Google"
+	},
+	"GitHubIdentityProvider314FDA96": {
+		"UserPoolId": "us-west-1_CfmKBSS3p",
+		"ProviderName": "GitHub"
+	},
+	"UserPoolClient2F5918F7": {
+		"UserPoolId": "us-west-1_CfmKBSS3p",
+		"ClientId": "662qvpjlv07qrt7qraiuj13gdd"
+	},
+	"UserPoolDomain5479B217": {
+		"UserPoolId": "us-west-1_CfmKBSS3p",
+		"Domain": "us-west-1cfmkbss3p"
+	}
+}

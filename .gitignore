@@ -8,6 +8,9 @@ node_modules
 /.svelte-kit
 /build
 
+# Infra (CDK)
+cdk.out
+
 # Playwright
 /test-results
 /playwright-report
