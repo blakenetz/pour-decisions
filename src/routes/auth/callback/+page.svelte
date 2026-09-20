@@ -35,7 +35,7 @@ onMount(() => {
 			resolved = true
 			unsubscribe()
 			await syncSession()
-			await goto('/')
+			await goto('/dashboard')
 		} else if (payload.event === 'signInWithRedirect_failure') {
 			resolved = true
 			unsubscribe()
@@ -52,7 +52,7 @@ onMount(() => {
 			resolved = true
 			unsubscribe()
 			await syncSession()
-			await goto('/')
+			await goto('/dashboard')
 		})
 		.catch(() => {
 			// Not yet authenticated — wait for Hub event
@@ -74,7 +74,7 @@ async function handleGitHubCallback() {
 		const { completeGitHubOAuth } = await import('$lib/auth/github')
 		await completeGitHubOAuth()
 		await syncSession()
-		await goto('/')
+		await goto('/dashboard')
 	} catch (err) {
 		errorMsg = err instanceof Error ? err.message : 'GitHub sign in failed. Please try again.'
 		timedOut = true
