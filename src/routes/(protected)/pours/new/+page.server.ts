@@ -2,7 +2,7 @@ import { PutCommand } from '@aws-sdk/lib-dynamodb'
 import { fail, redirect } from '@sveltejs/kit'
 import { ulid } from 'ulid'
 import { db, getTableName } from '$lib/server/db'
-import type { TastingDetails, TastingEntry, TastingNotes } from '$lib/types/tasting'
+import { createTastingInputSchema, type TastingDetails, type TastingEntry, type TastingNotes } from '$lib/types/tasting'
 import type { Actions } from './$types'
 
 function str(data: FormData, key: string): string | undefined {
@@ -59,13 +59,20 @@ export const actions: Actions = {
 		const hasDetails = Object.values(details).some((v) => v !== undefined)
 		const hasNotes = Object.values(notes).some((v) => v !== undefined)
 
+		const parsed = createTastingInputSchema.safeParse({
+			beverageType: 'coffee',
+			...(hasDetails && { details }),
+			...(hasNotes && { notes })
+		})
+		if (!parsed.success) {
+			return fail(400, { error: parsed.error.issues[0].message })
+		}
+
 		const entry: TastingEntry = {
 			userId: locals.user.userId,
 			entryId: ulid(),
-			beverageType: 'coffee',
 			createdAt: new Date().toISOString(),
-			...(hasDetails && { details }),
-			...(hasNotes && { notes })
+			...parsed.data
 		}
 
 		try {

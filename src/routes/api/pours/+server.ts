@@ -3,7 +3,7 @@ import { error, json } from '@sveltejs/kit'
 import { ulid } from 'ulid'
 import { getUserIdFromRequest } from '$lib/server/auth'
 import { db, getTableName } from '$lib/server/db'
-import type { CreateTastingInput, TastingEntry } from '$lib/types/tasting'
+import { createTastingInputSchema, type TastingEntry } from '$lib/types/tasting'
 import type { RequestHandler } from './$types'
 
 export const GET: RequestHandler = async ({ request }) => {
@@ -33,24 +33,23 @@ export const POST: RequestHandler = async ({ request }) => {
 		error(401, 'Unauthorized')
 	}
 
-	let body: CreateTastingInput
+	let body: unknown
 	try {
 		body = await request.json()
 	} catch {
 		error(400, 'Invalid JSON')
 	}
 
-	if (!body.beverageType) {
-		error(400, 'beverageType is required')
+	const parsed = createTastingInputSchema.safeParse(body)
+	if (!parsed.success) {
+		error(400, parsed.error.issues[0].message)
 	}
 
 	const entry: TastingEntry = {
 		userId,
 		entryId: ulid(),
-		beverageType: body.beverageType,
 		createdAt: new Date().toISOString(),
-		...(body.details && { details: body.details }),
-		...(body.notes && { notes: body.notes })
+		...parsed.data
 	}
 
 	await db.send(
