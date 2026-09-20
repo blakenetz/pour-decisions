@@ -2,6 +2,7 @@
 import { goto } from '$app/navigation'
 import { resolve } from '$app/paths'
 import { LoopLink } from '$lib'
+import cheersImage from '$lib/assets/cup-cheers.png'
 import tableLegsImage from '$lib/assets/table-legs.png'
 import { signOutUser } from '$lib/auth/auth'
 import PoursTrendChart from '$lib/components/dashboard/PoursTrendChart.svelte'
@@ -47,10 +48,11 @@ async function handleSignOut() {
 		</main>
 	{:else if data.pourCount < MIN_POURS_FOR_DASHBOARD}
 		<main class="flex-1 flex flex-col items-center justify-center gap-6 w-full max-w-2xl">
+			<img src={cheersImage} alt="" aria-hidden="true" class="h-96 w-auto" />
 			<div class="text-center">
 				<h2 class="text-3xl">Not enough data.</h2>
 				<p class="text-gray-500 mt-1">
-					Pour a few more — {data.pourCount} of {MIN_POURS_FOR_DASHBOARD} logged.
+					Pour a few more: {data.pourCount}/{MIN_POURS_FOR_DASHBOARD} pours
 				</p>
 			</div>
 			<LoopLink as="a" href="/pours/new">Log a Pour</LoopLink>

@@ -39,7 +39,7 @@ test.describe('pour-count-tiered dashboard', () => {
 	test('shows the "not enough data" state for a user with 1-10 pours', async ({ page }) => {
 		await loginAs(page, process.env.E2E_LOW_EMAIL as string)
 		await expect(page.getByRole('heading', { name: 'Not enough data.' })).toBeVisible()
-		await expect(page.getByText(/of 11 logged/)).toBeVisible()
+		await expect(page.getByText(/Pour a few more: 5\/11 pours/)).toBeVisible()
 	})
 
 	test('shows the full stats dashboard for a user with 11+ pours', async ({ page }) => {
