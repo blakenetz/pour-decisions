@@ -1,25 +1,23 @@
 {
-  "permissions": {
-    "allow": [
-      "mcp__svelte__svelte-autofixer",
-      "Bash(npx svelte-check:*)",
-      "Bash(npx eslint:*)",
-      "mcp__svelte__get-documentation",
-      "WebSearch",
-      "mcp__svelte__list-sections",
-      "Bash(pnpm biome:*)",
-      "Bash(pnpm check:*)",
-      "WebFetch(domain:svelte.dev)",
-      "Bash(npx tsc *)",
-      "Bash(npx svelte-kit *)",
-      "Bash(grep -rn 'onMount\\\\|window\\\\.location\\\\|resolve.*$app/paths\\\\|getAuthUser\\\\|getAuthSession' /Users/blakenetzeband/workspace/pour-decisions/src '--include=*.svelte' '--include=*.ts')",
-      "Bash(grep -v \"node_modules\\\\|\\\\.d\\\\.ts\\\\|auth\\\\.ts$\\\\|amplifyClient\")",
-      "Bash(grep -rn 'lib/assets\\\\|$lib/assets' src)",
-      "Bash(git check-ignore *)"
-    ]
-  },
-  "enableAllProjectMcpServers": true,
-  "enabledMcpjsonServers": [
-    "svelte"
-  ]
+	"permissions": {
+		"allow": [
+			"mcp__svelte__svelte-autofixer",
+			"Bash(npx svelte-check:*)",
+			"Bash(npx eslint:*)",
+			"mcp__svelte__get-documentation",
+			"WebSearch",
+			"mcp__svelte__list-sections",
+			"Bash(pnpm biome:*)",
+			"Bash(pnpm check:*)",
+			"WebFetch(domain:svelte.dev)",
+			"Bash(npx tsc *)",
+			"Bash(npx svelte-kit *)",
+			"Bash(grep -rn 'onMount\\\\|window\\\\.location\\\\|resolve.*$app/paths\\\\|getAuthUser\\\\|getAuthSession' /Users/blakenetzeband/workspace/pour-decisions/src '--include=*.svelte' '--include=*.ts')",
+			"Bash(grep -v \"node_modules\\\\|\\\\.d\\\\.ts\\\\|auth\\\\.ts$\\\\|amplifyClient\")",
+			"Bash(grep -rn 'lib/assets\\\\|$lib/assets' src)",
+			"Bash(git check-ignore *)"
+		]
+	},
+	"enableAllProjectMcpServers": true,
+	"enabledMcpjsonServers": ["svelte"]
 }
