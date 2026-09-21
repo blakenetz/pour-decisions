@@ -1,4 +1,4 @@
-import type { TastingEntry } from '../types/tasting'
+import type { TastingEntry, TastingNotes } from '../types/tasting'
 
 export interface DashboardStats {
 	totalPours: number
@@ -8,10 +8,7 @@ export interface DashboardStats {
 	avgCategoryRating: number | null
 	/** Delta between the second half and first half of scored pours (chronological). */
 	avgCategoryRatingTrend: number | null
-	ratingsByCategory: { category: string; value: number | null }[]
 	avgRoastLevel: number | null
-	poursByMonth: { month: string; count: number }[]
-	scoreByMonth: { month: string; avgScore: number }[]
 	topFlavorNotes: { name: string; count: number }[]
 	bestBrewMethod: { name: string; avgScore: number; count: number } | null
 	bestRoastBand: { name: string; avgScore: number; count: number } | null
@@ -19,6 +16,10 @@ export interface DashboardStats {
 	regionScores: { name: string; avgScore: number; count: number }[]
 	/** Avg score per roaster, top 8 by pour count — feeds the roaster radar chart. */
 	roasterScores: { name: string; avgScore: number; count: number }[]
+	/** Avg of each detailed 1-5 sub-rating across all scored pours, oldest-to-newest
+	 *  within each category (Aroma, Flavor, Acidity, Body, Finish) — feeds the
+	 *  diverging ratings chart. */
+	ratingBreakdown: { label: string; value: number | null }[]
 	personalBest: {
 		score: number
 		roaster: string | null
@@ -99,50 +100,29 @@ function radarGroups(
 		.slice(0, limit)
 }
 
+/** Mean of a single `TastingNotes` sub-rating field across every entry that has it set. */
+function noteFieldMean(
+	entries: TastingEntry[],
+	accessor: (notes: TastingNotes) => number | undefined
+): number | null {
+	const values: number[] = []
+	for (const entry of entries) {
+		if (!entry.notes) continue
+		const value = accessor(entry.notes)
+		if (value !== undefined) values.push(value)
+	}
+	return mean(values)
+}
+
 export function computeDashboardStats(entries: TastingEntry[]): DashboardStats {
-	const aroma: number[] = []
-	const flavor: number[] = []
-	const acidity: number[] = []
-	const body: number[] = []
-	const finish: number[] = []
 	const roastLevels: number[] = []
 	const flavorNotes: string[] = []
-	const monthCounts = new Map<string, number>()
-	const monthScores = new Map<string, number[]>()
 
 	for (const entry of entries) {
-		const notes = entry.notes
-		if (notes?.aromaIntensity !== undefined) aroma.push(notes.aromaIntensity)
-		if (notes?.aromaClarity !== undefined) aroma.push(notes.aromaClarity)
-		if (notes?.flavorComplexity !== undefined) flavor.push(notes.flavorComplexity)
-		if (notes?.flavorSweetness !== undefined) flavor.push(notes.flavorSweetness)
-		if (notes?.acidityIntensity !== undefined) acidity.push(notes.acidityIntensity)
-		if (notes?.acidityQuality !== undefined) acidity.push(notes.acidityQuality)
-		if (notes?.bodyWeight !== undefined) body.push(notes.bodyWeight)
-		if (notes?.bodyTactile !== undefined) body.push(notes.bodyTactile)
-		if (notes?.finishFlavor !== undefined) finish.push(notes.finishFlavor)
-		if (notes?.finishLength !== undefined) finish.push(notes.finishLength)
-
 		const details = entry.details
 		if (details?.roastLevel !== undefined) roastLevels.push(details.roastLevel)
 		if (details?.roasterNotes) flavorNotes.push(...details.roasterNotes)
-
-		const month = entry.createdAt.slice(0, 7)
-		monthCounts.set(month, (monthCounts.get(month) ?? 0) + 1)
-		if (entry.avgCategoryRating !== undefined) {
-			const scores = monthScores.get(month) ?? []
-			scores.push(entry.avgCategoryRating)
-			monthScores.set(month, scores)
-		}
 	}
-
-	const poursByMonth = [...monthCounts.entries()]
-		.sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))
-		.map(([month, count]) => ({ month, count }))
-
-	const scoreByMonth = [...monthScores.entries()]
-		.sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))
-		.map(([month, scores]) => ({ month, avgScore: mean(scores) as number }))
 
 	const scoredEntries = entries
 		.filter(
@@ -173,16 +153,7 @@ export function computeDashboardStats(entries: TastingEntry[]): DashboardStats {
 		totalPours: entries.length,
 		avgCategoryRating: mean(scoredEntries.map((e) => e.avgCategoryRating)),
 		avgCategoryRatingTrend,
-		ratingsByCategory: [
-			{ category: 'Aroma', value: mean(aroma) },
-			{ category: 'Flavor', value: mean(flavor) },
-			{ category: 'Acidity', value: mean(acidity) },
-			{ category: 'Body', value: mean(body) },
-			{ category: 'Finish', value: mean(finish) }
-		],
 		avgRoastLevel: mean(roastLevels),
-		poursByMonth,
-		scoreByMonth,
 		topFlavorNotes: topCounts(flavorNotes, 5),
 		bestBrewMethod: topRatedGroups(entries, (e) => e.details?.brewMethod, 1)[0] ?? null,
 		bestRoastBand:
@@ -193,6 +164,18 @@ export function computeDashboardStats(entries: TastingEntry[]): DashboardStats {
 			)[0] ?? null,
 		regionScores: radarGroups(entries, (e) => e.details?.region, 8),
 		roasterScores: radarGroups(entries, (e) => e.details?.producer, 8),
+		ratingBreakdown: [
+			{ label: 'Aroma Intensity', value: noteFieldMean(entries, (n) => n.aromaIntensity) },
+			{ label: 'Aroma Clarity', value: noteFieldMean(entries, (n) => n.aromaClarity) },
+			{ label: 'Flavor Complexity', value: noteFieldMean(entries, (n) => n.flavorComplexity) },
+			{ label: 'Flavor Sweetness', value: noteFieldMean(entries, (n) => n.flavorSweetness) },
+			{ label: 'Acidity Intensity', value: noteFieldMean(entries, (n) => n.acidityIntensity) },
+			{ label: 'Acidity Quality', value: noteFieldMean(entries, (n) => n.acidityQuality) },
+			{ label: 'Body Weight', value: noteFieldMean(entries, (n) => n.bodyWeight) },
+			{ label: 'Body Tactile', value: noteFieldMean(entries, (n) => n.bodyTactile) },
+			{ label: 'Finish Flavor', value: noteFieldMean(entries, (n) => n.finishFlavor) },
+			{ label: 'Finish Length', value: noteFieldMean(entries, (n) => n.finishLength) }
+		],
 		personalBest: personalBestEntry
 			? {
 					score: personalBestEntry.avgCategoryRating as number,

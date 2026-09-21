@@ -5,10 +5,8 @@ import { LoopLink } from '$lib'
 import cheersImage from '$lib/assets/cup-cheers.png'
 import tableLegsImage from '$lib/assets/table-legs.png'
 import { signOutUser } from '$lib/auth/auth'
-import PoursTrendChart from '$lib/components/dashboard/PoursTrendChart.svelte'
+import DivergingBarChart from '$lib/components/dashboard/DivergingBarChart.svelte'
 import RadarChart from '$lib/components/dashboard/RadarChart.svelte'
-import RatingsBarChart from '$lib/components/dashboard/RatingsBarChart.svelte'
-import ScoreTrendChart from '$lib/components/dashboard/ScoreTrendChart.svelte'
 import type { PageData } from './$types'
 
 const MIN_POURS_FOR_DASHBOARD = 11
@@ -96,20 +94,8 @@ async function handleSignOut() {
 			{/if}
 
 			<div>
-				<h2 class="text-xl font-bold mb-2">Taste Profile</h2>
-				<RatingsBarChart ratingsByCategory={data.stats.ratingsByCategory} />
-			</div>
-
-			{#if data.stats.scoreByMonth.length > 0}
-				<div>
-					<h2 class="text-xl font-bold mb-2">Rating Trend</h2>
-					<ScoreTrendChart scoreByMonth={data.stats.scoreByMonth} />
-				</div>
-			{/if}
-
-			<div>
-				<h2 class="text-xl font-bold mb-2">Pours Over Time</h2>
-				<PoursTrendChart poursByMonth={data.stats.poursByMonth} />
+				<h2 class="text-xl font-bold mb-2">Ratings</h2>
+				<DivergingBarChart data={data.stats.ratingBreakdown} />
 			</div>
 
 			{#if data.stats.bestBrewMethod || data.stats.bestRoastBand || data.stats.topFlavorNotes.length > 0}
