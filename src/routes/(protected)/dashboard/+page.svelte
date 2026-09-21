@@ -7,6 +7,7 @@ import tableLegsImage from '$lib/assets/table-legs.png'
 import { signOutUser } from '$lib/auth/auth'
 import PoursTrendChart from '$lib/components/dashboard/PoursTrendChart.svelte'
 import RatingsBarChart from '$lib/components/dashboard/RatingsBarChart.svelte'
+import ScoreTrendChart from '$lib/components/dashboard/ScoreTrendChart.svelte'
 import type { PageData } from './$types'
 
 const MIN_POURS_FOR_DASHBOARD = 11
@@ -64,45 +65,119 @@ async function handleSignOut() {
 					<p class="text-3xl font-bold">{data.stats.totalPours}</p>
 				</div>
 				<div>
+					<p class="text-sm text-gray-500">Overall Score</p>
+					<p class="text-3xl font-bold">
+						{data.stats.overallScore?.toFixed(1) ?? '—'}
+					{#if data.stats.scoreTrend !== null && Math.abs(data.stats.scoreTrend) >= 0.05}
+						{@const trend = data.stats.scoreTrend}
+						<span class="text-sm font-normal {trend >= 0 ? 'text-green-600' : 'text-red-600'}">
+							{trend >= 0 ? '▲' : '▼'}
+							{Math.abs(trend).toFixed(1)}
+						</span>
+					{/if}
+					</p>
+				</div>
+				<div>
 					<p class="text-sm text-gray-500">Avg Roast Level</p>
 					<p class="text-3xl font-bold">{data.stats.avgRoastLevel?.toFixed(1) ?? '—'}</p>
 				</div>
 			</div>
 
+			{#if data.stats.personalBest}
+				{@const best = data.stats.personalBest}
+				<div class="border border-gray-200 rounded-lg p-4">
+					<p class="text-sm text-gray-500">Personal Best</p>
+					<p class="text-2xl font-bold">{best.score.toFixed(1)}</p>
+					<p class="text-sm text-gray-600">
+						{[best.roaster, best.region].filter(Boolean).join(' · ') || 'Unnamed pour'} — {best.date}
+					</p>
+				</div>
+			{/if}
+
 			<div>
-				<h2 class="text-xl font-bold mb-2">Average Ratings</h2>
-				<RatingsBarChart avgRatings={data.stats.avgRatings} />
+				<h2 class="text-xl font-bold mb-2">Taste Profile</h2>
+				<RatingsBarChart ratingsByCategory={data.stats.ratingsByCategory} />
 			</div>
+
+			{#if data.stats.scoreByMonth.length > 0}
+				<div>
+					<h2 class="text-xl font-bold mb-2">Rating Trend</h2>
+					<ScoreTrendChart scoreByMonth={data.stats.scoreByMonth} />
+				</div>
+			{/if}
 
 			<div>
 				<h2 class="text-xl font-bold mb-2">Pours Over Time</h2>
 				<PoursTrendChart poursByMonth={data.stats.poursByMonth} />
 			</div>
 
-			<div class="flex gap-8">
-				<div class="flex-1">
-					<h2 class="text-xl font-bold mb-2">Top Roasters</h2>
-					<ul class="space-y-1">
-						{#each data.stats.topRoasters as roaster (roaster.name)}
-							<li class="flex justify-between text-sm">
-								<span>{roaster.name}</span>
-								<span class="text-gray-500">{roaster.count}</span>
-							</li>
-						{/each}
-					</ul>
+			{#if data.stats.bestBrewMethod || data.stats.bestRoastBand || data.stats.topFlavorNotes.length > 0}
+				<div>
+					<h2 class="text-xl font-bold mb-2">What You Love</h2>
+					<div class="flex gap-8">
+						{#if data.stats.bestBrewMethod}
+							{@const method = data.stats.bestBrewMethod}
+							<div class="flex-1">
+								<p class="text-sm text-gray-500">Best Brew Method</p>
+								<p class="text-lg font-semibold">{method.name}</p>
+								<p class="text-sm text-gray-500">{method.avgScore.toFixed(1)} avg · {method.count} pours</p>
+							</div>
+						{/if}
+						{#if data.stats.bestRoastBand}
+							{@const band = data.stats.bestRoastBand}
+							<div class="flex-1">
+								<p class="text-sm text-gray-500">Best Roast</p>
+								<p class="text-lg font-semibold">{band.name}</p>
+								<p class="text-sm text-gray-500">{band.avgScore.toFixed(1)} avg · {band.count} pours</p>
+							</div>
+						{/if}
+						{#if data.stats.topFlavorNotes.length > 0}
+							<div class="flex-1">
+								<p class="text-sm text-gray-500 mb-1">Top Flavor Notes</p>
+								<ul class="space-y-1">
+									{#each data.stats.topFlavorNotes as note (note.name)}
+										<li class="flex justify-between text-sm">
+											<span>{note.name}</span>
+											<span class="text-gray-500">{note.count}</span>
+										</li>
+									{/each}
+								</ul>
+							</div>
+						{/if}
+					</div>
 				</div>
-				<div class="flex-1">
-					<h2 class="text-xl font-bold mb-2">Top Regions</h2>
-					<ul class="space-y-1">
-						{#each data.stats.topRegions as region (region.name)}
-							<li class="flex justify-between text-sm">
-								<span>{region.name}</span>
-								<span class="text-gray-500">{region.count}</span>
-							</li>
-						{/each}
-					</ul>
+			{/if}
+
+			{#if data.stats.topRatedRoasters.length > 0 || data.stats.topRatedRegions.length > 0}
+				<div class="flex gap-8">
+					{#if data.stats.topRatedRoasters.length > 0}
+						<div class="flex-1">
+							<h2 class="text-xl font-bold mb-2">Top Rated Roasters</h2>
+							<ul class="space-y-1">
+								{#each data.stats.topRatedRoasters as roaster (roaster.name)}
+									<li class="flex justify-between text-sm">
+										<span>{roaster.name}</span>
+										<span class="text-gray-500">{roaster.avgScore.toFixed(1)}</span>
+									</li>
+								{/each}
+							</ul>
+						</div>
+					{/if}
+					{#if data.stats.topRatedRegions.length > 0}
+						<div class="flex-1">
+							<h2 class="text-xl font-bold mb-2">Top Rated Regions</h2>
+							<ul class="space-y-1">
+								{#each data.stats.topRatedRegions as region (region.name)}
+									<li class="flex justify-between text-sm">
+										<span>{region.name}</span>
+										<span class="text-gray-500">{region.avgScore.toFixed(1)}</span>
+									</li>
+								{/each}
+							</ul>
+						</div>
+					{/if}
 				</div>
-			</div>
+			{/if}
 		</main>
 		<footer class="w-full max-w-4xl py-8 flex flex-col items-center gap-3 text-center">
 			<p class="text-gray-500">Ready for another?</p>

@@ -2,22 +2,40 @@ import type { TastingEntry } from '../types/tasting'
 
 export interface DashboardStats {
 	totalPours: number
-	avgRatings: {
-		aroma: number | null
-		flavor: number | null
-		acidity: number | null
-		body: number | null
-		finish: number | null
-	}
+	/** Mean of every scored pour's `overallScore`. */
+	overallScore: number | null
+	/** Delta between the second half and first half of scored pours (chronological). */
+	scoreTrend: number | null
+	ratingsByCategory: { category: string; value: number | null }[]
 	avgRoastLevel: number | null
-	topRoasters: { name: string; count: number }[]
-	topRegions: { name: string; count: number }[]
 	poursByMonth: { month: string; count: number }[]
+	scoreByMonth: { month: string; avgScore: number }[]
+	topFlavorNotes: { name: string; count: number }[]
+	bestBrewMethod: { name: string; avgScore: number; count: number } | null
+	bestRoastBand: { name: string; avgScore: number; count: number } | null
+	topRatedRoasters: { name: string; avgScore: number; count: number }[]
+	topRatedRegions: { name: string; avgScore: number; count: number }[]
+	personalBest: {
+		score: number
+		roaster: string | null
+		region: string | null
+		date: string
+	} | null
 }
+
+/** Minimum pours a group (brew method, roast band, roaster, region) needs before its
+ *  average is surfaced — avoids a single lucky/unlucky pour skewing a "best X" claim. */
+const MIN_GROUP_SIZE = 2
 
 function mean(values: number[]): number | null {
 	if (values.length === 0) return null
 	return values.reduce((sum, v) => sum + v, 0) / values.length
+}
+
+function roastBand(level: number): string {
+	if (level <= 3) return 'Light'
+	if (level <= 7) return 'Medium'
+	return 'Dark'
 }
 
 function topCounts(values: string[], limit: number): { name: string; count: number }[] {
@@ -31,6 +49,29 @@ function topCounts(values: string[], limit: number): { name: string; count: numb
 		.map(([name, count]) => ({ name, count }))
 }
 
+/** Groups scored entries by `key(entry)` (skipping entries with no key), returning
+ *  per-group average `overallScore`, sorted descending and filtered to `MIN_GROUP_SIZE`+. */
+function topRatedGroups(
+	entries: TastingEntry[],
+	key: (entry: TastingEntry) => string | undefined,
+	limit: number
+): { name: string; avgScore: number; count: number }[] {
+	const groups = new Map<string, number[]>()
+	for (const entry of entries) {
+		if (entry.overallScore === undefined) continue
+		const name = key(entry)
+		if (name === undefined) continue
+		const scores = groups.get(name) ?? []
+		scores.push(entry.overallScore)
+		groups.set(name, scores)
+	}
+	return [...groups.entries()]
+		.filter(([, scores]) => scores.length >= MIN_GROUP_SIZE)
+		.map(([name, scores]) => ({ name, avgScore: mean(scores) as number, count: scores.length }))
+		.sort((a, b) => b.avgScore - a.avgScore)
+		.slice(0, limit)
+}
+
 export function computeDashboardStats(entries: TastingEntry[]): DashboardStats {
 	const aroma: number[] = []
 	const flavor: number[] = []
@@ -38,9 +79,9 @@ export function computeDashboardStats(entries: TastingEntry[]): DashboardStats {
 	const body: number[] = []
 	const finish: number[] = []
 	const roastLevels: number[] = []
-	const roasters: string[] = []
-	const regions: string[] = []
+	const flavorNotes: string[] = []
 	const monthCounts = new Map<string, number>()
+	const monthScores = new Map<string, number[]>()
 
 	for (const entry of entries) {
 		const notes = entry.notes
@@ -57,29 +98,78 @@ export function computeDashboardStats(entries: TastingEntry[]): DashboardStats {
 
 		const details = entry.details
 		if (details?.roastLevel !== undefined) roastLevels.push(details.roastLevel)
-		if (details?.producer !== undefined) roasters.push(details.producer)
-		if (details?.region !== undefined) regions.push(details.region)
+		if (details?.roasterNotes) flavorNotes.push(...details.roasterNotes)
 
 		const month = entry.createdAt.slice(0, 7)
 		monthCounts.set(month, (monthCounts.get(month) ?? 0) + 1)
+		if (entry.overallScore !== undefined) {
+			const scores = monthScores.get(month) ?? []
+			scores.push(entry.overallScore)
+			monthScores.set(month, scores)
+		}
 	}
 
 	const poursByMonth = [...monthCounts.entries()]
 		.sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))
 		.map(([month, count]) => ({ month, count }))
 
+	const scoreByMonth = [...monthScores.entries()]
+		.sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))
+		.map(([month, scores]) => ({ month, avgScore: mean(scores) as number }))
+
+	const scoredEntries = entries
+		.filter(
+			(entry): entry is TastingEntry & { overallScore: number } => entry.overallScore !== undefined
+		)
+		.sort((a, b) => (a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0))
+
+	const midpoint = Math.floor(scoredEntries.length / 2)
+	const firstHalf = scoredEntries.slice(0, midpoint)
+	const secondHalf = scoredEntries.slice(midpoint)
+	const firstHalfAvg = mean(firstHalf.map((e) => e.overallScore))
+	const secondHalfAvg = mean(secondHalf.map((e) => e.overallScore))
+	const scoreTrend =
+		firstHalf.length > 0 && secondHalf.length > 0 && firstHalfAvg !== null && secondHalfAvg !== null
+			? secondHalfAvg - firstHalfAvg
+			: null
+
+	const personalBestEntry = scoredEntries.reduce<TastingEntry | null>(
+		(best, entry) =>
+			best === null || (entry.overallScore ?? 0) > (best.overallScore ?? 0) ? entry : best,
+		null
+	)
+
 	return {
 		totalPours: entries.length,
-		avgRatings: {
-			aroma: mean(aroma),
-			flavor: mean(flavor),
-			acidity: mean(acidity),
-			body: mean(body),
-			finish: mean(finish)
-		},
+		overallScore: mean(scoredEntries.map((e) => e.overallScore)),
+		scoreTrend,
+		ratingsByCategory: [
+			{ category: 'Aroma', value: mean(aroma) },
+			{ category: 'Flavor', value: mean(flavor) },
+			{ category: 'Acidity', value: mean(acidity) },
+			{ category: 'Body', value: mean(body) },
+			{ category: 'Finish', value: mean(finish) }
+		],
 		avgRoastLevel: mean(roastLevels),
-		topRoasters: topCounts(roasters, 3),
-		topRegions: topCounts(regions, 3),
-		poursByMonth
+		poursByMonth,
+		scoreByMonth,
+		topFlavorNotes: topCounts(flavorNotes, 5),
+		bestBrewMethod: topRatedGroups(entries, (e) => e.details?.brewMethod, 1)[0] ?? null,
+		bestRoastBand:
+			topRatedGroups(
+				entries,
+				(e) => (e.details?.roastLevel !== undefined ? roastBand(e.details.roastLevel) : undefined),
+				1
+			)[0] ?? null,
+		topRatedRoasters: topRatedGroups(entries, (e) => e.details?.producer, 3),
+		topRatedRegions: topRatedGroups(entries, (e) => e.details?.region, 3),
+		personalBest: personalBestEntry
+			? {
+					score: personalBestEntry.overallScore as number,
+					roaster: personalBestEntry.details?.producer ?? null,
+					region: personalBestEntry.details?.region ?? null,
+					date: personalBestEntry.createdAt.slice(0, 10)
+				}
+			: null
 	}
 }
