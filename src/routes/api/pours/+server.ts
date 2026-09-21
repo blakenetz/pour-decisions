@@ -3,7 +3,11 @@ import { error, json } from '@sveltejs/kit'
 import { ulid } from 'ulid'
 import { getUserIdFromRequest } from '$lib/server/auth'
 import { db, getTableName } from '$lib/server/db'
-import { createTastingInputSchema, type TastingEntry } from '$lib/types/tasting'
+import {
+	computeOverallScore,
+	createTastingInputSchema,
+	type TastingEntry
+} from '$lib/types/tasting'
 import type { RequestHandler } from './$types'
 
 export const GET: RequestHandler = async ({ request }) => {
@@ -45,11 +49,14 @@ export const POST: RequestHandler = async ({ request }) => {
 		error(400, parsed.error.issues[0].message)
 	}
 
+	const overallScore = computeOverallScore(parsed.data.notes)
+
 	const entry: TastingEntry = {
 		userId,
 		entryId: ulid(),
 		createdAt: new Date().toISOString(),
-		...parsed.data
+		...parsed.data,
+		...(overallScore !== undefined && { overallScore })
 	}
 
 	await db.send(

@@ -3,6 +3,7 @@ import { fail, redirect } from '@sveltejs/kit'
 import { ulid } from 'ulid'
 import { db, getTableName } from '$lib/server/db'
 import {
+	computeOverallScore,
 	createTastingInputSchema,
 	type TastingDetails,
 	type TastingEntry,
@@ -73,11 +74,14 @@ export const actions: Actions = {
 			return fail(400, { error: parsed.error.issues[0].message })
 		}
 
+		const overallScore = computeOverallScore(parsed.data.notes)
+
 		const entry: TastingEntry = {
 			userId: locals.user.userId,
 			entryId: ulid(),
 			createdAt: new Date().toISOString(),
-			...parsed.data
+			...parsed.data,
+			...(overallScore !== undefined && { overallScore })
 		}
 
 		try {

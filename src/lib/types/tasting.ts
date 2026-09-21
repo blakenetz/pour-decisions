@@ -63,6 +63,31 @@ export interface TastingNotes {
 	freeText?: string
 }
 
+/**
+ * A pour's overall score — the mean of every rated sub-metric the taster filled
+ * in (aroma/flavor/acidity/body/finish, 2 fields each, 1–5). `undefined` when a
+ * pour has no ratings at all. Computed once at write time and persisted on the
+ * entry so every downstream consumer (dashboard aggregates, future pour lists)
+ * reads the same number instead of recomputing it from raw fields.
+ */
+export function computeOverallScore(notes: TastingNotes | undefined): number | undefined {
+	if (!notes) return undefined
+	const values = [
+		notes.aromaIntensity,
+		notes.aromaClarity,
+		notes.flavorComplexity,
+		notes.flavorSweetness,
+		notes.acidityIntensity,
+		notes.acidityQuality,
+		notes.bodyWeight,
+		notes.bodyTactile,
+		notes.finishFlavor,
+		notes.finishLength
+	].filter((v): v is number => v !== undefined)
+	if (values.length === 0) return undefined
+	return Math.round((values.reduce((sum, v) => sum + v, 0) / values.length) * 10) / 10
+}
+
 export const tastingNotesSchema = z.object({
 	aromaIntensity: z.number().int().min(1).max(5).optional(),
 	aromaClarity: z.number().int().min(1).max(5).optional(),
@@ -89,6 +114,8 @@ export interface TastingEntry {
 	createdAt: string
 	details?: TastingDetails
 	notes?: TastingNotes
+	/** Computed by {@link computeOverallScore} at write time; not user-editable. */
+	overallScore?: number
 }
 
 export type CreateTastingInput = Omit<TastingEntry, 'userId' | 'entryId' | 'createdAt'>
