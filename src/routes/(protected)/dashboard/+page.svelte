@@ -6,6 +6,7 @@ import cheersImage from '$lib/assets/cup-cheers.png'
 import tableLegsImage from '$lib/assets/table-legs.png'
 import { signOutUser } from '$lib/auth/auth'
 import PoursTrendChart from '$lib/components/dashboard/PoursTrendChart.svelte'
+import RadarChart from '$lib/components/dashboard/RadarChart.svelte'
 import RatingsBarChart from '$lib/components/dashboard/RatingsBarChart.svelte'
 import ScoreTrendChart from '$lib/components/dashboard/ScoreTrendChart.svelte'
 import type { PageData } from './$types'
@@ -148,32 +149,18 @@ async function handleSignOut() {
 				</div>
 			{/if}
 
-			{#if data.stats.topRatedRoasters.length > 0 || data.stats.topRatedRegions.length > 0}
+			{#if data.stats.regionScores.length > 0 || data.stats.roasterScores.length > 0}
 				<div class="flex gap-8">
-					{#if data.stats.topRatedRoasters.length > 0}
-						<div class="flex-1">
-							<h2 class="text-xl font-bold mb-2">Top Rated Roasters</h2>
-							<ul class="space-y-1">
-								{#each data.stats.topRatedRoasters as roaster (roaster.name)}
-									<li class="flex justify-between text-sm">
-										<span>{roaster.name}</span>
-										<span class="text-gray-500">{roaster.avgScore.toFixed(1)}</span>
-									</li>
-								{/each}
-							</ul>
+					{#if data.stats.regionScores.length > 0}
+						<div class="flex-1 flex flex-col items-center">
+							<h2 class="text-xl font-bold mb-2 self-start">By Region</h2>
+							<RadarChart data={data.stats.regionScores} />
 						</div>
 					{/if}
-					{#if data.stats.topRatedRegions.length > 0}
-						<div class="flex-1">
-							<h2 class="text-xl font-bold mb-2">Top Rated Regions</h2>
-							<ul class="space-y-1">
-								{#each data.stats.topRatedRegions as region (region.name)}
-									<li class="flex justify-between text-sm">
-										<span>{region.name}</span>
-										<span class="text-gray-500">{region.avgScore.toFixed(1)}</span>
-									</li>
-								{/each}
-							</ul>
+					{#if data.stats.roasterScores.length > 0}
+						<div class="flex-1 flex flex-col items-center">
+							<h2 class="text-xl font-bold mb-2 self-start">By Roaster</h2>
+							<RadarChart data={data.stats.roasterScores} />
 						</div>
 					{/if}
 				</div>

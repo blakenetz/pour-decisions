@@ -53,6 +53,8 @@ test.describe('pour-count-tiered dashboard', () => {
 		await expect(page.getByText('Rating Trend')).toBeVisible()
 		await expect(page.getByText('Pours Over Time')).toBeVisible()
 		await expect(page.getByText('What You Love')).toBeVisible()
+		await expect(page.getByText('By Region')).toBeVisible()
+		await expect(page.getByText('By Roaster')).toBeVisible()
 		await expect(page.getByText('Ready for another?')).toBeVisible()
 		await expect(page.getByRole('link', { name: 'Log a Pour' })).toBeVisible()
 	})

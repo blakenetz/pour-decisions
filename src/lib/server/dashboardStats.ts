@@ -13,8 +13,10 @@ export interface DashboardStats {
 	topFlavorNotes: { name: string; count: number }[]
 	bestBrewMethod: { name: string; avgScore: number; count: number } | null
 	bestRoastBand: { name: string; avgScore: number; count: number } | null
-	topRatedRoasters: { name: string; avgScore: number; count: number }[]
-	topRatedRegions: { name: string; avgScore: number; count: number }[]
+	/** Avg score per region, top 8 by pour count — feeds the region radar chart. */
+	regionScores: { name: string; avgScore: number; count: number }[]
+	/** Avg score per roaster, top 8 by pour count — feeds the roaster radar chart. */
+	roasterScores: { name: string; avgScore: number; count: number }[]
 	personalBest: {
 		score: number
 		roaster: string | null
@@ -49,13 +51,12 @@ function topCounts(values: string[], limit: number): { name: string; count: numb
 		.map(([name, count]) => ({ name, count }))
 }
 
-/** Groups scored entries by `key(entry)` (skipping entries with no key), returning
- *  per-group average `overallScore`, sorted descending and filtered to `MIN_GROUP_SIZE`+. */
-function topRatedGroups(
+/** Groups scored entries by `key(entry)` (skipping entries with no key or score),
+ *  returning per-group `overallScore`s. */
+function groupScoresByKey(
 	entries: TastingEntry[],
-	key: (entry: TastingEntry) => string | undefined,
-	limit: number
-): { name: string; avgScore: number; count: number }[] {
+	key: (entry: TastingEntry) => string | undefined
+): Map<string, number[]> {
 	const groups = new Map<string, number[]>()
 	for (const entry of entries) {
 		if (entry.overallScore === undefined) continue
@@ -65,10 +66,34 @@ function topRatedGroups(
 		scores.push(entry.overallScore)
 		groups.set(name, scores)
 	}
-	return [...groups.entries()]
+	return groups
+}
+
+/** Per-group average `overallScore`, filtered to `MIN_GROUP_SIZE`+ and sorted by score
+ *  descending — for "best X" claims where a single lucky pour shouldn't count. */
+function topRatedGroups(
+	entries: TastingEntry[],
+	key: (entry: TastingEntry) => string | undefined,
+	limit: number
+): { name: string; avgScore: number; count: number }[] {
+	return [...groupScoresByKey(entries, key).entries()]
 		.filter(([, scores]) => scores.length >= MIN_GROUP_SIZE)
 		.map(([name, scores]) => ({ name, avgScore: mean(scores) as number, count: scores.length }))
 		.sort((a, b) => b.avgScore - a.avgScore)
+		.slice(0, limit)
+}
+
+/** Per-group average `overallScore` for every group with at least one scored pour,
+ *  sorted by pour count descending — feeds radar/radial charts, where the goal is a
+ *  representative shape across your most-brewed groups, not a "best of" ranking. */
+function radarGroups(
+	entries: TastingEntry[],
+	key: (entry: TastingEntry) => string | undefined,
+	limit: number
+): { name: string; avgScore: number; count: number }[] {
+	return [...groupScoresByKey(entries, key).entries()]
+		.map(([name, scores]) => ({ name, avgScore: mean(scores) as number, count: scores.length }))
+		.sort((a, b) => b.count - a.count)
 		.slice(0, limit)
 }
 
@@ -161,8 +186,8 @@ export function computeDashboardStats(entries: TastingEntry[]): DashboardStats {
 				(e) => (e.details?.roastLevel !== undefined ? roastBand(e.details.roastLevel) : undefined),
 				1
 			)[0] ?? null,
-		topRatedRoasters: topRatedGroups(entries, (e) => e.details?.producer, 3),
-		topRatedRegions: topRatedGroups(entries, (e) => e.details?.region, 3),
+		regionScores: radarGroups(entries, (e) => e.details?.region, 8),
+		roasterScores: radarGroups(entries, (e) => e.details?.producer, 8),
 		personalBest: personalBestEntry
 			? {
 					score: personalBestEntry.overallScore as number,
