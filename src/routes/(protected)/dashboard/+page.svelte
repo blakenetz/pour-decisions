@@ -5,8 +5,11 @@ import { LoopLink } from '$lib'
 import cheersImage from '$lib/assets/cup-cheers.png'
 import tableLegsImage from '$lib/assets/table-legs.png'
 import { signOutUser } from '$lib/auth/auth'
-import DivergingBarChart from '$lib/components/dashboard/DivergingBarChart.svelte'
+import LocationDonutChart from '$lib/components/dashboard/LocationDonutChart.svelte'
+import PourExplorer from '$lib/components/dashboard/PourExplorer.svelte'
 import RadarChart from '$lib/components/dashboard/RadarChart.svelte'
+import RoastRatingScatter from '$lib/components/dashboard/RoastRatingScatter.svelte'
+import TasteProfileChart from '$lib/components/dashboard/TasteProfileChart.svelte'
 import type { PageData } from './$types'
 
 const MIN_POURS_FOR_DASHBOARD = 11
@@ -94,8 +97,8 @@ async function handleSignOut() {
 			{/if}
 
 			<div>
-				<h2 class="text-xl font-bold mb-2">Ratings</h2>
-				<DivergingBarChart data={data.stats.ratingBreakdown} />
+				<h2 class="text-xl font-bold mb-2">Taste Profile</h2>
+				<TasteProfileChart ratingsByCategory={data.stats.ratingsByCategory} />
 			</div>
 
 			{#if data.stats.bestBrewMethod || data.stats.bestRoastBand || data.stats.topFlavorNotes.length > 0}
@@ -151,6 +154,24 @@ async function handleSignOut() {
 					{/if}
 				</div>
 			{/if}
+
+			<div class="flex gap-8">
+				<div class="flex-1">
+					<h2 class="text-xl font-bold mb-2">Roast Level vs Rating</h2>
+					<RoastRatingScatter data={data.stats.roastVsRating} />
+				</div>
+				{#if data.stats.locationSplit.length > 0}
+					<div class="flex-1 flex flex-col items-center">
+						<h2 class="text-xl font-bold mb-2 self-start">Home vs Out and About</h2>
+						<LocationDonutChart data={data.stats.locationSplit} />
+					</div>
+				{/if}
+			</div>
+
+			<div>
+				<h2 class="text-xl font-bold mb-2">Explore Your Pours</h2>
+				<PourExplorer pours={data.pours} />
+			</div>
 		</main>
 		<footer class="w-full max-w-4xl py-8 flex flex-col items-center gap-3 text-center">
 			<p class="text-gray-500">Ready for another?</p>

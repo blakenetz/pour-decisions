@@ -16,10 +16,13 @@ export interface DashboardStats {
 	regionScores: { name: string; avgScore: number; count: number }[]
 	/** Avg score per roaster, top 8 by pour count — feeds the roaster radar chart. */
 	roasterScores: { name: string; avgScore: number; count: number }[]
-	/** Avg of each detailed 1-5 sub-rating across all scored pours, oldest-to-newest
-	 *  within each category (Aroma, Flavor, Acidity, Body, Finish) — feeds the
-	 *  diverging ratings chart. */
-	ratingBreakdown: { label: string; value: number | null }[]
+	/** Avg of the two sub-ratings within each category (1-5) — feeds the taste profile chart. */
+	ratingsByCategory: { category: string; value: number | null }[]
+	/** One point per pour with both a roast level and a computed rating — feeds the
+	 *  roast-level-vs-rating scatter chart. */
+	roastVsRating: { roastLevel: number; rating: number }[]
+	/** Home vs. out-and-about pour counts — feeds the location split donut chart. */
+	locationSplit: { location: string; count: number }[]
 	personalBest: {
 		score: number
 		roaster: string | null
@@ -100,16 +103,19 @@ function radarGroups(
 		.slice(0, limit)
 }
 
-/** Mean of a single `TastingNotes` sub-rating field across every entry that has it set. */
-function noteFieldMean(
+/** Mean across every value returned by any of `accessors` on every entry that has
+ *  notes — used to average a category's two sub-rating fields into one number. */
+function categoryMean(
 	entries: TastingEntry[],
-	accessor: (notes: TastingNotes) => number | undefined
+	accessors: ((notes: TastingNotes) => number | undefined)[]
 ): number | null {
 	const values: number[] = []
 	for (const entry of entries) {
 		if (!entry.notes) continue
-		const value = accessor(entry.notes)
-		if (value !== undefined) values.push(value)
+		for (const accessor of accessors) {
+			const value = accessor(entry.notes)
+			if (value !== undefined) values.push(value)
+		}
 	}
 	return mean(values)
 }
@@ -117,11 +123,20 @@ function noteFieldMean(
 export function computeDashboardStats(entries: TastingEntry[]): DashboardStats {
 	const roastLevels: number[] = []
 	const flavorNotes: string[] = []
+	const roastVsRating: { roastLevel: number; rating: number }[] = []
+	const locationCounts = new Map<string, number>()
 
 	for (const entry of entries) {
 		const details = entry.details
 		if (details?.roastLevel !== undefined) roastLevels.push(details.roastLevel)
 		if (details?.roasterNotes) flavorNotes.push(...details.roasterNotes)
+		if (details?.roastLevel !== undefined && entry.avgCategoryRating !== undefined) {
+			roastVsRating.push({ roastLevel: details.roastLevel, rating: entry.avgCategoryRating })
+		}
+		if (details?.location) {
+			const label = details.location === 'home' ? 'Home' : 'Out and about'
+			locationCounts.set(label, (locationCounts.get(label) ?? 0) + 1)
+		}
 	}
 
 	const scoredEntries = entries
@@ -164,18 +179,30 @@ export function computeDashboardStats(entries: TastingEntry[]): DashboardStats {
 			)[0] ?? null,
 		regionScores: radarGroups(entries, (e) => e.details?.region, 8),
 		roasterScores: radarGroups(entries, (e) => e.details?.producer, 8),
-		ratingBreakdown: [
-			{ label: 'Aroma Intensity', value: noteFieldMean(entries, (n) => n.aromaIntensity) },
-			{ label: 'Aroma Clarity', value: noteFieldMean(entries, (n) => n.aromaClarity) },
-			{ label: 'Flavor Complexity', value: noteFieldMean(entries, (n) => n.flavorComplexity) },
-			{ label: 'Flavor Sweetness', value: noteFieldMean(entries, (n) => n.flavorSweetness) },
-			{ label: 'Acidity Intensity', value: noteFieldMean(entries, (n) => n.acidityIntensity) },
-			{ label: 'Acidity Quality', value: noteFieldMean(entries, (n) => n.acidityQuality) },
-			{ label: 'Body Weight', value: noteFieldMean(entries, (n) => n.bodyWeight) },
-			{ label: 'Body Tactile', value: noteFieldMean(entries, (n) => n.bodyTactile) },
-			{ label: 'Finish Flavor', value: noteFieldMean(entries, (n) => n.finishFlavor) },
-			{ label: 'Finish Length', value: noteFieldMean(entries, (n) => n.finishLength) }
+		ratingsByCategory: [
+			{
+				category: 'Aroma',
+				value: categoryMean(entries, [(n) => n.aromaIntensity, (n) => n.aromaClarity])
+			},
+			{
+				category: 'Flavor',
+				value: categoryMean(entries, [(n) => n.flavorComplexity, (n) => n.flavorSweetness])
+			},
+			{
+				category: 'Acidity',
+				value: categoryMean(entries, [(n) => n.acidityIntensity, (n) => n.acidityQuality])
+			},
+			{
+				category: 'Body',
+				value: categoryMean(entries, [(n) => n.bodyWeight, (n) => n.bodyTactile])
+			},
+			{
+				category: 'Finish',
+				value: categoryMean(entries, [(n) => n.finishFlavor, (n) => n.finishLength])
+			}
 		],
+		roastVsRating,
+		locationSplit: [...locationCounts.entries()].map(([location, count]) => ({ location, count })),
 		personalBest: personalBestEntry
 			? {
 					score: personalBestEntry.avgCategoryRating as number,
