@@ -66,16 +66,16 @@ async function handleSignOut() {
 					<p class="text-3xl font-bold">{data.stats.totalPours}</p>
 				</div>
 				<div>
-					<p class="text-sm text-gray-500">Overall Score</p>
+					<p class="text-sm text-gray-500">Avg Category Rating</p>
 					<p class="text-3xl font-bold">
-						{data.stats.overallScore?.toFixed(1) ?? '—'}
-					{#if data.stats.scoreTrend !== null && Math.abs(data.stats.scoreTrend) >= 0.05}
-						{@const trend = data.stats.scoreTrend}
-						<span class="text-sm font-normal {trend >= 0 ? 'text-green-600' : 'text-red-600'}">
-							{trend >= 0 ? '▲' : '▼'}
-							{Math.abs(trend).toFixed(1)}
-						</span>
-					{/if}
+						{data.stats.avgCategoryRating?.toFixed(1) ?? '—'}
+						{#if data.stats.avgCategoryRatingTrend !== null && Math.abs(data.stats.avgCategoryRatingTrend) >= 0.05}
+							{@const trend = data.stats.avgCategoryRatingTrend}
+							<span class="text-sm font-normal {trend >= 0 ? 'text-green-600' : 'text-red-600'}">
+								{trend >= 0 ? '▲' : '▼'}
+								{Math.abs(trend).toFixed(1)}
+							</span>
+						{/if}
 					</p>
 				</div>
 				<div>

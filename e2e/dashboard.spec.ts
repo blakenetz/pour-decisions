@@ -47,7 +47,7 @@ test.describe('pour-count-tiered dashboard', () => {
 		await expect(page.getByRole('link', { name: '← Home' })).toHaveCount(0)
 		await expect(page.getByText('Total Pours')).toBeVisible()
 		await expect(page.getByText('15', { exact: true })).toBeVisible()
-		await expect(page.getByText('Overall Score')).toBeVisible()
+		await expect(page.getByText('Avg Category Rating')).toBeVisible()
 		await expect(page.getByText('Personal Best')).toBeVisible()
 		await expect(page.getByText('Taste Profile')).toBeVisible()
 		await expect(page.getByText('Rating Trend')).toBeVisible()

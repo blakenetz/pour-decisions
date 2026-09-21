@@ -19,6 +19,7 @@ let { form }: { form: ActionData } = $props()
 
 let location: 'home' | 'out' = $state('home')
 
+let overallRating = $state(0)
 let roastLevel = $state(0)
 let aromaIntensity = $state(0)
 let aromaClarity = $state(0)
@@ -107,6 +108,14 @@ const textareaClass =
 					placeholder="e.g. raspberry, magnolia, watermelon, vanilla"
 					class={inputClass}
 				/>
+			</div>
+
+			<div class="flex flex-col gap-3">
+				<RatingRow name="overallRating" label="Overall Rating" bind:value={overallRating} max={10} />
+				<div class="flex justify-between text-[10px] text-gray-400 uppercase tracking-widest">
+					<span>Poor</span>
+					<span>Excellent</span>
+				</div>
 			</div>
 
 			<div class="flex flex-col gap-3">

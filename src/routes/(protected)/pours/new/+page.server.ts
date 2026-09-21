@@ -3,7 +3,7 @@ import { fail, redirect } from '@sveltejs/kit'
 import { ulid } from 'ulid'
 import { db, getTableName } from '$lib/server/db'
 import {
-	computeOverallScore,
+	computeAvgCategoryRating,
 	createTastingInputSchema,
 	type TastingDetails,
 	type TastingEntry,
@@ -49,6 +49,7 @@ export const actions: Actions = {
 		}
 
 		const notes: TastingNotes = {
+			overallRating: num(data, 'overallRating'),
 			aromaIntensity: num(data, 'aromaIntensity'),
 			aromaClarity: num(data, 'aromaClarity'),
 			aromaNotes: str(data, 'aromaNotes'),
@@ -79,14 +80,14 @@ export const actions: Actions = {
 			return fail(400, { error: parsed.error.issues[0].message })
 		}
 
-		const overallScore = computeOverallScore(parsed.data.notes)
+		const avgCategoryRating = computeAvgCategoryRating(parsed.data.notes)
 
 		const entry: TastingEntry = {
 			userId: locals.user.userId,
 			entryId: ulid(),
 			createdAt: new Date().toISOString(),
 			...parsed.data,
-			...(overallScore !== undefined && { overallScore })
+			...(avgCategoryRating !== undefined && { avgCategoryRating })
 		}
 
 		try {

@@ -50,6 +50,9 @@ export const tastingDetailsSchema = z.object({
 })
 
 export interface TastingNotes {
+	/** 1–10. Direct taster judgment — distinct from `TastingEntry.avgCategoryRating`,
+	 *  which is computed from the fields below. */
+	overallRating?: number
 	/** 1–5 */
 	aromaIntensity?: number
 	/** 1–5 */
@@ -79,13 +82,14 @@ export interface TastingNotes {
 }
 
 /**
- * A pour's overall score — the mean of every rated sub-metric the taster filled
- * in (aroma/flavor/acidity/body/finish, 2 fields each, 1–5). `undefined` when a
- * pour has no ratings at all. Computed once at write time and persisted on the
- * entry so every downstream consumer (dashboard aggregates, future pour lists)
- * reads the same number instead of recomputing it from raw fields.
+ * A pour's average category rating — the mean of every rated sub-metric the taster
+ * filled in (aroma/flavor/acidity/body/finish, 2 fields each, 1–5). Distinct from
+ * `TastingNotes.overallRating`, the taster's direct 1–10 judgment. `undefined` when
+ * a pour has no category ratings at all. Computed once at write time and persisted
+ * on the entry so every downstream consumer (dashboard aggregates, future pour
+ * lists) reads the same number instead of recomputing it from raw fields.
  */
-export function computeOverallScore(notes: TastingNotes | undefined): number | undefined {
+export function computeAvgCategoryRating(notes: TastingNotes | undefined): number | undefined {
 	if (!notes) return undefined
 	const values = [
 		notes.aromaIntensity,
@@ -104,6 +108,7 @@ export function computeOverallScore(notes: TastingNotes | undefined): number | u
 }
 
 export const tastingNotesSchema = z.object({
+	overallRating: z.number().int().min(1).max(10).optional(),
 	aromaIntensity: z.number().int().min(1).max(5).optional(),
 	aromaClarity: z.number().int().min(1).max(5).optional(),
 	aromaNotes: z.string().trim().max(1000).optional(),
@@ -129,8 +134,8 @@ export interface TastingEntry {
 	createdAt: string
 	details?: TastingDetails
 	notes?: TastingNotes
-	/** Computed by {@link computeOverallScore} at write time; not user-editable. */
-	overallScore?: number
+	/** Computed by {@link computeAvgCategoryRating} at write time; not user-editable. */
+	avgCategoryRating?: number
 }
 
 export type CreateTastingInput = Omit<TastingEntry, 'userId' | 'entryId' | 'createdAt'>

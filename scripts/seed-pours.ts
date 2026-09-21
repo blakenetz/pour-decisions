@@ -8,7 +8,7 @@ import {
 } from '@aws-sdk/lib-dynamodb'
 import { ulid } from 'ulid'
 import {
-	computeOverallScore,
+	computeAvgCategoryRating,
 	createTastingInputSchema,
 	type TastingEntry
 } from '../src/lib/types/tasting'
@@ -130,6 +130,7 @@ async function seedUserPours(
 		}
 
 		const notes = {
+			overallRating: randomInt(1, 10),
 			aromaIntensity: randomInt(1, 5),
 			aromaClarity: randomInt(1, 5),
 			flavorComplexity: randomInt(1, 5),
@@ -151,14 +152,14 @@ async function seedUserPours(
 			throw new Error(`Generated entry failed validation: ${JSON.stringify(parsed.error.issues)}`)
 		}
 
-		const overallScore = computeOverallScore(parsed.data.notes)
+		const avgCategoryRating = computeAvgCategoryRating(parsed.data.notes)
 
 		const entry: TastingEntry = {
 			userId,
 			entryId: ulid(),
 			createdAt,
 			...parsed.data,
-			...(overallScore !== undefined && { overallScore })
+			...(avgCategoryRating !== undefined && { avgCategoryRating })
 		}
 
 		await db.send(new PutCommand({ TableName: tableName, Item: entry }))
