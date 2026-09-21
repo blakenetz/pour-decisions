@@ -1,6 +1,7 @@
 <script lang="ts">
 import { onDestroy, onMount } from 'svelte'
 import { browser } from '$app/environment'
+import { env } from '$env/dynamic/public'
 import { initAmplify } from '$lib/auth/amplifyClient'
 import { signInUser, signInWithOAuth, syncSession } from '$lib/auth/auth'
 import Modal from './Modal.svelte'
@@ -17,8 +18,11 @@ let {
 	onswitchtosignup?: () => void
 } = $props()
 
-let email = $state('')
-let password = $state('')
+// Dev-only convenience: prefills the login form from PUBLIC_DEV_PREFILL_EMAIL/PASSWORD
+// (see .env.example). `import.meta.env.DEV` is a compile-time constant, so this branch
+// is dead-code-eliminated from production builds entirely — it can never apply in prod.
+let email = $state(import.meta.env.DEV ? (env.PUBLIC_DEV_PREFILL_EMAIL ?? '') : '')
+let password = $state(import.meta.env.DEV ? (env.PUBLIC_DEV_PREFILL_PASSWORD ?? '') : '')
 let loading = $state(false)
 let errorMsg = $state('')
 let isOnline = $state(true)
