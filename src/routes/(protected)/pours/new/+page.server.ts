@@ -40,7 +40,12 @@ export const actions: Actions = {
 			waterGrams: num(data, 'waterGrams'),
 			waterTempF: num(data, 'waterTempF'),
 			roastDate: str(data, 'roastDate'),
-			brewDate: str(data, 'brewDate')
+			brewDate: str(data, 'brewDate'),
+			location: str(data, 'location') as TastingDetails['location'],
+			locationName: str(data, 'locationName'),
+			locationAddress: str(data, 'locationAddress'),
+			locationLat: num(data, 'locationLat'),
+			locationLng: num(data, 'locationLng')
 		}
 
 		const notes: TastingNotes = {
@@ -86,7 +91,8 @@ export const actions: Actions = {
 
 		try {
 			await db.send(new PutCommand({ TableName: getTableName(), Item: entry }))
-		} catch {
+		} catch (err) {
+			console.error('Failed to save pour:', err)
 			return fail(500, { error: 'Failed to save pour. Please try again.' })
 		}
 

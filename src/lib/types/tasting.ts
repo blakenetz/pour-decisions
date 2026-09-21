@@ -2,6 +2,10 @@ import { z } from 'zod'
 
 export type BeverageType = 'coffee'
 
+/** Where the pour happened. `'out'` covers anywhere away from home — a cafe, a
+ *  friend's place, the office — captured via {@link TastingDetails.locationName}. */
+export type PourLocation = 'home' | 'out'
+
 export interface TastingDetails {
 	producer?: string
 	productName?: string
@@ -17,6 +21,12 @@ export interface TastingDetails {
 	waterTempF?: number
 	roastDate?: string
 	brewDate?: string
+	location?: PourLocation
+	/** Place name, e.g. "Blue Bottle Coffee — Mission". Only set when `location` is `'out'`. */
+	locationName?: string
+	locationAddress?: string
+	locationLat?: number
+	locationLng?: number
 }
 
 export const tastingDetailsSchema = z.object({
@@ -31,7 +41,12 @@ export const tastingDetailsSchema = z.object({
 	waterGrams: z.number().positive().max(5000).optional(),
 	waterTempF: z.number().min(32).max(220).optional(),
 	roastDate: z.iso.date().optional(),
-	brewDate: z.iso.date().optional()
+	brewDate: z.iso.date().optional(),
+	location: z.enum(['home', 'out']).optional(),
+	locationName: z.string().trim().min(1).max(200).optional(),
+	locationAddress: z.string().trim().min(1).max(300).optional(),
+	locationLat: z.number().min(-90).max(90).optional(),
+	locationLng: z.number().min(-180).max(180).optional()
 })
 
 export interface TastingNotes {

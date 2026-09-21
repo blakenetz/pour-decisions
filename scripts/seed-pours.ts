@@ -23,7 +23,9 @@ const tableName = process.env.DYNAMODB_TABLE
 if (!tableName) throw new Error('DYNAMODB_TABLE is not configured')
 
 const client = new DynamoDBClient({ region: process.env.PUBLIC_AWS_REGION || 'us-west-1' })
-const db = DynamoDBDocumentClient.from(client)
+const db = DynamoDBDocumentClient.from(client, {
+	marshallOptions: { removeUndefinedValues: true }
+})
 
 const ROASTERS = [
 	'Blue Bottle',
@@ -58,6 +60,13 @@ const FLAVOR_NOTES = [
 	'brown sugar',
 	'jasmine',
 	'citrus'
+]
+const CAFES = [
+	'Blue Bottle Coffee',
+	'Sightglass Coffee',
+	'Ritual Coffee Roasters',
+	'Four Barrel Coffee',
+	'Philz Coffee'
 ]
 
 function pick<T>(values: T[]): T {
@@ -101,6 +110,8 @@ async function seedUserPours(
 		const createdAt = new Date(Date.now() - Math.random() * 90 * 86_400_000).toISOString()
 		const brewDate = dateStringFrom(createdAt)
 
+		const location: 'home' | 'out' = Math.random() < 0.5 ? 'home' : 'out'
+
 		const details = {
 			producer: pick(ROASTERS),
 			productName: pick(FLAVOR_NOTES),
@@ -113,7 +124,9 @@ async function seedUserPours(
 			waterGrams: randomInt(200, 500),
 			waterTempF: randomInt(195, 205),
 			roastDate: brewDate,
-			brewDate
+			brewDate,
+			location,
+			...(location === 'out' && { locationName: pick(CAFES) })
 		}
 
 		const notes = {

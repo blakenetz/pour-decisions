@@ -1,6 +1,7 @@
 <script lang="ts">
 import { enhance } from '$app/forms'
 import { Flowers, RatingRow } from '$lib'
+import CafeLocationInput from '$lib/components/CafeLocationInput.svelte'
 import type { ActionData } from './$types'
 
 const BREW_METHODS = ['Espresso', 'Pour Over', 'French Press', 'Drip', 'Cold Brew', 'AeroPress']
@@ -15,6 +16,8 @@ const GRIND_SIZES = [
 ]
 
 let { form }: { form: ActionData } = $props()
+
+let location: 'home' | 'out' = $state('home')
 
 let roastLevel = $state(0)
 let aromaIntensity = $state(0)
@@ -113,6 +116,24 @@ const textareaClass =
 					<span>Dark</span>
 				</div>
 			</div>
+		</div>
+
+		<div class="flex flex-col gap-6">
+			<h2 class={sectionHeadingClass}>Location</h2>
+
+			<div class="flex flex-col gap-1">
+				<label for="location" class={labelClass}>Where</label>
+				<select id="location" name="location" class={inputClass} bind:value={location}>
+					<option value="home">Home</option>
+					<option value="out">Out and about</option>
+				</select>
+			</div>
+
+			{#if location === 'out'}
+				<div class="flex flex-col gap-1">
+					<CafeLocationInput />
+				</div>
+			{/if}
 		</div>
 
 		<div class="flex flex-col gap-6">
