@@ -26,7 +26,6 @@ async function handleSignOut() {
 			: 'max-w-2xl'} flex items-center justify-between py-4"
 	>
 		<div class="flex items-center gap-4">
-			<a href={resolve('/')} class="text-sm underline hover:text-gray-600">← Home</a>
 			<h1 class="text-3xl font-bold">Dashboard</h1>
 		</div>
 		<div class="flex items-center gap-4">
@@ -105,5 +104,9 @@ async function handleSignOut() {
 				</div>
 			</div>
 		</main>
+		<footer class="w-full max-w-4xl py-8 flex flex-col items-center gap-3 text-center">
+			<p class="text-gray-500">Ready for another?</p>
+			<LoopLink as="a" href="/pours/new">Log a Pour</LoopLink>
+		</footer>
 	{/if}
 </section>

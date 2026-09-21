@@ -44,11 +44,14 @@ test.describe('pour-count-tiered dashboard', () => {
 
 	test('shows the full stats dashboard for a user with 11+ pours', async ({ page }) => {
 		await loginAs(page, process.env.E2E_HIGH_EMAIL as string)
+		await expect(page.getByRole('link', { name: '← Home' })).toHaveCount(0)
 		await expect(page.getByText('Total Pours')).toBeVisible()
 		await expect(page.getByText('15', { exact: true })).toBeVisible()
 		await expect(page.getByText('Average Ratings')).toBeVisible()
 		await expect(page.getByText('Pours Over Time')).toBeVisible()
 		await expect(page.getByText('Top Roasters')).toBeVisible()
 		await expect(page.getByText('Top Regions')).toBeVisible()
+		await expect(page.getByText('Ready for another?')).toBeVisible()
+		await expect(page.getByRole('link', { name: 'Log a Pour' })).toBeVisible()
 	})
 })
