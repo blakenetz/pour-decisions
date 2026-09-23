@@ -21,6 +21,16 @@ A palate analytics app that helps users track and understand their taste prefere
 - Zod for validation
 - LayerChart for visualization
 
+## Workflow
+
+- Commit at each logical checkpoint without waiting to be asked: after a coherent
+  feature/fix/refactor is verified (typecheck + smoke test/e2e pass), commit before
+  starting the next unrelated concern. Don't let unrelated changes pile up uncommitted.
+- Split commits by concern (e.g. schema/capture change vs. UI rebuild), not by turn.
+- Match the existing `type: summary` convention (`feat:`, `fix:`, `refactor:`, `docs:`)
+  visible in `git log`. Body explains *why*, not a line-by-line diff narration.
+- Never commit `.env*` (already gitignored) or leave the tree dirty at a stopping point.
+
 ---
 
 ## Tasting data model
