@@ -5,6 +5,9 @@ if (!PASSWORD) {
 	throw new Error('E2E_TEST_PASSWORD must be set (see .env.test.local)')
 }
 
+/** Pour count the seed script gives the "high" tier account. */
+const HIGH_TIER_POURS = 120
+
 async function loginAs(page: Page, email: string) {
 	await page.goto('/')
 	const loginButton = page.getByRole('button', { name: 'Login' })
@@ -42,20 +45,71 @@ test.describe('pour-count-tiered dashboard', () => {
 		await expect(page.getByText(/Pour a few more: 5\/11 pours/)).toBeVisible()
 	})
 
-	test('shows the full stats dashboard for a user with 11+ pours', async ({ page }) => {
+	test('shows the explorable dashboard for a user with 11+ pours', async ({ page }) => {
 		await loginAs(page, process.env.E2E_HIGH_EMAIL as string)
-		await expect(page.getByRole('link', { name: '← Home' })).toHaveCount(0)
-		await expect(page.getByText('Total Pours')).toBeVisible()
-		await expect(page.getByText('15', { exact: true })).toBeVisible()
-		await expect(page.getByText('Avg Category Rating')).toBeVisible()
-		await expect(page.getByText('Personal Best')).toBeVisible()
-		await expect(page.getByText('Taste Profile')).toBeVisible()
-		await expect(page.getByText('What You Love')).toBeVisible()
-		await expect(page.getByText('By Region')).toBeVisible()
-		await expect(page.getByText('By Roaster')).toBeVisible()
-		await expect(page.getByText('Roast Level vs Rating')).toBeVisible()
-		await expect(page.getByText('Explore Your Pours')).toBeVisible()
-		await expect(page.getByText('Ready for another?')).toBeVisible()
+		await expect(page.getByRole('heading', { name: 'What your log says' })).toBeVisible()
+		await expect(page.getByRole('heading', { name: 'Explore' })).toBeVisible()
+		await expect(page.getByText('Pours in view').first()).toBeVisible()
+		await expect(page.getByText(String(HIGH_TIER_POURS), { exact: true }).first()).toBeVisible()
 		await expect(page.getByRole('link', { name: 'Log a Pour' })).toBeVisible()
+	})
+})
+
+test.describe('dashboard drill-down', () => {
+	test.beforeEach(async ({ page }) => {
+		await loginAs(page, process.env.E2E_HIGH_EMAIL as string)
+	})
+
+	test('filtering by origin narrows every downstream view', async ({ page }) => {
+		const unfilteredRows = await page.locator('tbody tr').count()
+		await page.locator('#filter-country').selectOption('Ethiopia')
+
+		// The pour table only lists the filtered origin.
+		const originCells = page.locator('tbody tr td:nth-child(3)')
+		const count = await originCells.count()
+		expect(count).toBeGreaterThan(0)
+		for (let i = 0; i < count; i++) {
+			await expect(originCells.nth(i)).toContainText('Ethiopia')
+		}
+
+		// The table is capped, so narrowing shows up as the chip plus a row set that
+		// is no larger than the unfiltered one — every row of which is Ethiopian.
+		expect(count).toBeLessThanOrEqual(unfilteredRows)
+		await expect(page.getByRole('button', { name: /Origin: Ethiopia/ })).toBeVisible()
+	})
+
+	test('grind size axis stays in fine-to-coarse order, not alphabetical', async ({ page }) => {
+		await page.locator('#filter-brewMethod').selectOption('Pour Over')
+		await page.locator('#breakdown').selectOption('grindSize')
+
+		const labels = await page
+			.locator('.lc-axis-tick text, svg text')
+			.allTextContents()
+			.then((all) => all.map((t) => t.trim()))
+
+		const grindOrder = [
+			'Extra Fine',
+			'Fine',
+			'Medium-Fine',
+			'Medium',
+			'Medium-Coarse',
+			'Coarse',
+			'Extra Coarse'
+		]
+		const present = labels.filter((label) => grindOrder.includes(label))
+		expect(present.length).toBeGreaterThan(1)
+
+		const ranks = present.map((label) => grindOrder.indexOf(label))
+		const sorted = [...ranks].sort((a, b) => a - b)
+		expect(ranks).toEqual(sorted)
+	})
+
+	test('clearing filters restores the full collection', async ({ page }) => {
+		await page.locator('#filter-country').selectOption('Ethiopia')
+		await expect(page.getByRole('button', { name: /Origin: Ethiopia/ })).toBeVisible()
+
+		await page.getByRole('button', { name: 'Clear all' }).click()
+		await expect(page.getByRole('button', { name: /Origin: Ethiopia/ })).toHaveCount(0)
+		await expect(page.getByText(String(HIGH_TIER_POURS), { exact: true }).first()).toBeVisible()
 	})
 })
