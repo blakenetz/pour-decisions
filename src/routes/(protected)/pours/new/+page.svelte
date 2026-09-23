@@ -1,19 +1,10 @@
 <script lang="ts">
 import { enhance } from '$app/forms'
+import { resolve } from '$app/paths'
 import { Flowers, RatingRow } from '$lib'
 import CafeLocationInput from '$lib/components/CafeLocationInput.svelte'
+import { BREW_METHODS, COUNTRIES, GRIND_SIZES, PROCESSES } from '$lib/types/coffee'
 import type { ActionData } from './$types'
-
-const BREW_METHODS = ['Espresso', 'Pour Over', 'French Press', 'Drip', 'Cold Brew', 'AeroPress']
-const GRIND_SIZES = [
-	'Extra Fine',
-	'Fine',
-	'Medium-Fine',
-	'Medium',
-	'Medium-Coarse',
-	'Coarse',
-	'Extra Coarse'
-]
 
 let { form }: { form: ActionData } = $props()
 
@@ -32,7 +23,14 @@ let bodyTactile = $state(0)
 let finishFlavor = $state(0)
 let finishLength = $state(0)
 let brewDate = $state(new Date().toISOString().slice(0, 10))
+let brewMinutes = $state('')
+let brewSeconds = $state('')
+let wouldBuyAgain: 'yes' | 'no' | '' = $state('')
 let submitting = $state(false)
+
+// Posted as a single seconds value so the schema stores one comparable number
+// rather than two fields every consumer has to recombine.
+const brewTimeSeconds = $derived((Number(brewMinutes) || 0) * 60 + (Number(brewSeconds) || 0) || '')
 
 const inputClass =
 	'border-b border-dark-ink bg-transparent py-2 focus:outline-none placeholder:text-gray-300'
@@ -41,12 +39,13 @@ const sectionHeadingClass =
 	'text-sm uppercase tracking-widest text-gray-500 font-semibold border-b border-gray-200 pb-2'
 const textareaClass =
 	'border-b border-dark-ink bg-transparent py-2 resize-none focus:outline-none placeholder:text-gray-300'
+const toggleClass = 'px-4 py-2 border text-sm transition-colors rounded-full border-dark-ink'
 </script>
 
 <Flowers />
 <section class="min-h-[100dvh] p-6 flex flex-col max-w-lg mx-auto">
 	<header class="mb-10">
-		<a href="/" class="text-sm text-gray-500 hover:text-dark-ink">← Back</a>
+		<a href={resolve('/')} class="text-sm text-gray-500 hover:text-dark-ink">← Back</a>
 		<h1 class="text-5xl mt-3">Log a Pour</h1>
 	</header>
 
@@ -66,10 +65,10 @@ const textareaClass =
 
 			<div class="grid grid-cols-2 gap-6">
 				<div class="flex flex-col gap-1">
-					<label for="producer" class={labelClass}>Roaster</label>
+					<label for="roaster" class={labelClass}>Roaster</label>
 					<input
-						id="producer"
-						name="producer"
+						id="roaster"
+						name="roaster"
 						type="text"
 						placeholder="e.g. Blue Bottle"
 						class={inputClass}
@@ -82,21 +81,43 @@ const textareaClass =
 						id="productName"
 						name="productName"
 						type="text"
-						placeholder="e.g. Ethiopia Yirgacheffe"
+						placeholder="e.g. Yirgacheffe Konga"
+						class={inputClass}
+					/>
+				</div>
+			</div>
+
+			<div class="grid grid-cols-2 gap-6">
+				<div class="flex flex-col gap-1">
+					<label for="country" class={labelClass}>Origin</label>
+					<select id="country" name="country" class={inputClass}>
+						<option value="">Select a country</option>
+						{#each COUNTRIES as country (country)}
+							<option value={country}>{country}</option>
+						{/each}
+					</select>
+				</div>
+
+				<div class="flex flex-col gap-1">
+					<label for="region" class={labelClass}>Region</label>
+					<input
+						id="region"
+						name="region"
+						type="text"
+						placeholder="e.g. Yirgacheffe"
 						class={inputClass}
 					/>
 				</div>
 			</div>
 
 			<div class="flex flex-col gap-1">
-				<label for="region" class={labelClass}>Region</label>
-				<input
-					id="region"
-					name="region"
-					type="text"
-					placeholder="e.g. Yirgacheffe, Ethiopia"
-					class={inputClass}
-				/>
+				<label for="process" class={labelClass}>Process</label>
+				<select id="process" name="process" class={inputClass}>
+					<option value="">Select a process</option>
+					{#each PROCESSES as process (process)}
+						<option value={process}>{process}</option>
+					{/each}
+				</select>
 			</div>
 
 			<div class="flex flex-col gap-1">
@@ -187,6 +208,33 @@ const textareaClass =
 				</div>
 			</div>
 
+			<div class="flex flex-col gap-1">
+				<span class={labelClass}>Brew Time</span>
+				<input type="hidden" name="brewTimeSeconds" value={brewTimeSeconds} />
+				<div class="flex items-baseline gap-2">
+					<input
+						aria-label="Brew time minutes"
+						bind:value={brewMinutes}
+						type="number"
+						min="0"
+						max="120"
+						placeholder="3"
+						class="{inputClass} w-16 text-right"
+					/>
+					<span class="text-sm text-gray-500">min</span>
+					<input
+						aria-label="Brew time seconds"
+						bind:value={brewSeconds}
+						type="number"
+						min="0"
+						max="59"
+						placeholder="30"
+						class="{inputClass} w-16 text-right"
+					/>
+					<span class="text-sm text-gray-500">sec</span>
+				</div>
+			</div>
+
 			<div class="grid grid-cols-2 gap-6">
 				<div class="flex flex-col gap-1">
 					<label for="roastDate" class={labelClass}>Roast Date</label>
@@ -273,6 +321,47 @@ const textareaClass =
 					placeholder="Notes on finish..."
 					class={textareaClass}
 				></textarea>
+			</div>
+
+			<div class="flex flex-col gap-1">
+				<label for="tasterNotes" class={labelClass}>What You Tasted</label>
+				<input
+					id="tasterNotes"
+					name="tasterNotes"
+					type="text"
+					placeholder="e.g. blueberry, cocoa, lemon"
+					class={inputClass}
+				/>
+				<p class="text-[10px] text-gray-400 mt-1">
+					Your own notes, comma separated — compared against the roaster's on your dashboard.
+				</p>
+			</div>
+
+			<div class="flex flex-col gap-3">
+				<span class={labelClass}>Would You Buy It Again?</span>
+				<input type="hidden" name="wouldBuyAgain" value={wouldBuyAgain} />
+				<div class="flex gap-3">
+					<button
+						type="button"
+						aria-pressed={wouldBuyAgain === 'yes'}
+						onclick={() => (wouldBuyAgain = wouldBuyAgain === 'yes' ? '' : 'yes')}
+						class="{toggleClass} {wouldBuyAgain === 'yes'
+							? 'bg-dark-ink text-off-white'
+							: 'bg-transparent text-dark-ink'}"
+					>
+						Yes
+					</button>
+					<button
+						type="button"
+						aria-pressed={wouldBuyAgain === 'no'}
+						onclick={() => (wouldBuyAgain = wouldBuyAgain === 'no' ? '' : 'no')}
+						class="{toggleClass} {wouldBuyAgain === 'no'
+							? 'bg-dark-ink text-off-white'
+							: 'bg-transparent text-dark-ink'}"
+					>
+						No
+					</button>
+				</div>
 			</div>
 		</div>
 

@@ -13,6 +13,7 @@
 		"lint": "biome lint .",
 		"format": "biome check --write .",
 		"seed": "tsx scripts/seed-pours.ts",
+		"migrate": "tsx scripts/migrate-pours.ts",
 		"test:e2e": "playwright test"
 	},
 	"devDependencies": {

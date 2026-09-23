@@ -2,8 +2,10 @@ import { PutCommand } from '@aws-sdk/lib-dynamodb'
 import { fail, redirect } from '@sveltejs/kit'
 import { ulid } from 'ulid'
 import { db, getTableName } from '$lib/server/db'
+import { parseNotes } from '$lib/types/coffee'
 import {
-	computeAvgCategoryRating,
+	computeIntensityScore,
+	computeQualityScore,
 	createTastingInputSchema,
 	type TastingDetails,
 	type TastingEntry,
@@ -26,19 +28,19 @@ export const actions: Actions = {
 		const data = await request.formData()
 
 		const details: TastingDetails = {
-			producer: str(data, 'producer'),
+			roaster: str(data, 'roaster'),
 			productName: str(data, 'productName'),
+			country: str(data, 'country'),
 			region: str(data, 'region'),
+			process: str(data, 'process'),
 			roastLevel: num(data, 'roastLevel'),
-			roasterNotes: str(data, 'roasterNotes')
-				?.split(',')
-				.map((tag) => tag.trim())
-				.filter(Boolean),
+			roasterNotes: parseNotes(str(data, 'roasterNotes')),
 			brewMethod: str(data, 'brewMethod'),
 			grindSize: str(data, 'grindSize'),
 			coffeeGrams: num(data, 'coffeeGrams'),
 			waterGrams: num(data, 'waterGrams'),
 			waterTempF: num(data, 'waterTempF'),
+			brewTimeSeconds: num(data, 'brewTimeSeconds'),
 			roastDate: str(data, 'roastDate'),
 			brewDate: str(data, 'brewDate'),
 			location: str(data, 'location') as TastingDetails['location'],
@@ -47,6 +49,8 @@ export const actions: Actions = {
 			locationLat: num(data, 'locationLat'),
 			locationLng: num(data, 'locationLng')
 		}
+
+		const buyAgain = str(data, 'wouldBuyAgain')
 
 		const notes: TastingNotes = {
 			overallRating: num(data, 'overallRating'),
@@ -65,6 +69,8 @@ export const actions: Actions = {
 			finishFlavor: num(data, 'finishFlavor'),
 			finishLength: num(data, 'finishLength'),
 			finishNotes: str(data, 'finishNotes'),
+			tasterNotes: parseNotes(str(data, 'tasterNotes')),
+			wouldBuyAgain: buyAgain === undefined ? undefined : buyAgain === 'yes',
 			freeText: str(data, 'freeText')
 		}
 
@@ -80,14 +86,16 @@ export const actions: Actions = {
 			return fail(400, { error: parsed.error.issues[0].message })
 		}
 
-		const avgCategoryRating = computeAvgCategoryRating(parsed.data.notes)
+		const qualityScore = computeQualityScore(parsed.data.notes)
+		const intensityScore = computeIntensityScore(parsed.data.notes)
 
 		const entry: TastingEntry = {
 			userId: locals.user.userId,
 			entryId: ulid(),
 			createdAt: new Date().toISOString(),
 			...parsed.data,
-			...(avgCategoryRating !== undefined && { avgCategoryRating })
+			...(qualityScore !== undefined && { qualityScore }),
+			...(intensityScore !== undefined && { intensityScore })
 		}
 
 		try {

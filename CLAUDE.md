@@ -9,8 +9,8 @@ A palate analytics app that helps users track and understand their taste prefere
 
 ## Core Features
 
-- **Tasting form:** A multi-field input form for logging coffee tastings (roaster, origin, brew method, boldness, acidity, sweetness, flavor notes, overall rating, free-text notes, etc.).
-- **Dashboard (`/dashboard`):** Authenticated landing page that aggregates and visualizes tasting data — trends over time, favorite roasters, flavor profile breakdowns, etc.
+- **Tasting form:** A multi-field input form for logging coffee tastings (roaster, origin country + region, process, brew method, grind size, brew time, roast level, the ten 1–5 sub-ratings, taster's own flavor tags, would-buy-again, free-text notes).
+- **Dashboard (`/dashboard`):** Authenticated landing page built around drill-down. A flat fact table (one row per pour) is sent to the client and every chart, filter and finding derives from it, so slicing never costs a round trip. See "Tasting data model" below.
 - **Auth:** Email/password and social sign-in (Google, GitHub, Apple) via AWS Amplify/Cognito.
 
 ## Tech Stack
@@ -19,6 +19,42 @@ A palate analytics app that helps users track and understand their taste prefere
 - Tailwind CSS
 - AWS Amplify (Cognito auth)
 - Zod for validation
+- LayerChart for visualization
+
+---
+
+## Tasting data model
+
+### Quality vs. intensity — do not re-merge these
+
+Each pour carries ten 1–5 sub-ratings, and they measure two different things:
+
+- **Evaluative** (`aromaClarity`, `flavorComplexity`, `flavorSweetness`, `acidityQuality`,
+  `finishFlavor`) — how *good* the cup is. Averaged into the persisted `qualityScore`.
+- **Descriptive** (`aromaIntensity`, `acidityIntensity`, `bodyWeight`, `bodyTactile`,
+  `finishLength`) — how *loud* the cup is. Averaged into the persisted `intensityScore`.
+
+Averaging all ten together (as an earlier `avgCategoryRating` did) asserts that a louder
+coffee is a better one, which turns every "best brew method / best roast" claim into a
+statement about volume rather than preference. Rank with `qualityScore`; chart
+`intensityScore` as a profile shape.
+
+### Groupable dimensions
+
+Anything the dashboard groups by is an enum in `src/lib/types/coffee.ts` — free text
+fragments into ungroupable variants. `country` is separate from `region` so origin-level
+questions ("light or dark for Ethiopia?") are answerable. `grindSize` is ordinal: use
+`grindRank()` for axis ordering, since alphabetically "Coarse" precedes "Extra Fine".
+
+Flavor tags are normalized (`normalizeNote`) at write time so casing never splits a group.
+
+### Scripts
+
+- `pnpm seed` — regenerates dev pours. Models a simulated palate (grind × method,
+  origin × roast, process character, freshness curve) rather than randomizing fields
+  independently, because uncorrelated data makes every chart a flat line and hides
+  whether a visualization actually works. Deterministic per user id.
+- `pnpm migrate` — one-shot schema migration; dry-run by default, `--apply` to write.
 
 ---
 

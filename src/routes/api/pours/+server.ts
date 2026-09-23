@@ -4,7 +4,8 @@ import { ulid } from 'ulid'
 import { getUserIdFromRequest } from '$lib/server/auth'
 import { db, getTableName } from '$lib/server/db'
 import {
-	computeAvgCategoryRating,
+	computeIntensityScore,
+	computeQualityScore,
 	createTastingInputSchema,
 	type TastingEntry
 } from '$lib/types/tasting'
@@ -49,14 +50,16 @@ export const POST: RequestHandler = async ({ request }) => {
 		error(400, parsed.error.issues[0].message)
 	}
 
-	const avgCategoryRating = computeAvgCategoryRating(parsed.data.notes)
+	const qualityScore = computeQualityScore(parsed.data.notes)
+	const intensityScore = computeIntensityScore(parsed.data.notes)
 
 	const entry: TastingEntry = {
 		userId,
 		entryId: ulid(),
 		createdAt: new Date().toISOString(),
 		...parsed.data,
-		...(avgCategoryRating !== undefined && { avgCategoryRating })
+		...(qualityScore !== undefined && { qualityScore }),
+		...(intensityScore !== undefined && { intensityScore })
 	}
 
 	await db.send(
