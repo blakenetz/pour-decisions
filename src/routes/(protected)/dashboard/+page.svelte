@@ -30,6 +30,7 @@ import type { PageData } from './$types'
 const MIN_POURS_FOR_DASHBOARD = 11
 
 let { data }: { data: PageData } = $props()
+let menuOpen = $state(false)
 
 let filters = $state<Filters>({})
 let breakdown = $state<DimensionId>('brewMethod')
@@ -99,14 +100,58 @@ const cardClass = 'border border-gray-200 rounded-lg p-5'
 	<header
 		class="w-full {data.pours.length >= MIN_POURS_FOR_DASHBOARD
 			? 'max-w-6xl'
-			: 'max-w-2xl'} flex items-center justify-between py-4"
+			: 'max-w-2xl'} flex items-center justify-between py-3 px-5 my-2 rounded-lg bg-dark-ink text-off-white"
 	>
 		<h1 class="text-3xl font-bold">Dashboard</h1>
-		<div class="flex items-center gap-4">
-			<span class="text-sm text-gray-600">{data.user.username}</span>
-			<button onclick={handleSignOut} class="text-sm underline hover:text-gray-600">
-				Sign Out
+		<div class="relative">
+			<button
+				aria-label="Menu"
+				aria-expanded={menuOpen}
+				onclick={() => (menuOpen = !menuOpen)}
+				class="p-2 -m-2 cursor-pointer"
+			>
+				<svg
+					width="22"
+					height="22"
+					viewBox="0 0 22 22"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+				>
+					<line x1="2" y1="5" x2="20" y2="5" />
+					<line x1="2" y1="11" x2="20" y2="11" />
+					<line x1="2" y1="17" x2="20" y2="17" />
+				</svg>
 			</button>
+
+			{#if menuOpen}
+				<button
+					aria-label="Close menu"
+					onclick={() => (menuOpen = false)}
+					class="fixed inset-0 z-10 cursor-default"
+				></button>
+				<div
+					class="absolute right-0 top-full mt-2 z-20 w-40 flex flex-col rounded-lg border border-gray-200 bg-off-white text-dark-ink py-1 shadow-lg"
+				>
+					<a
+						href={resolve('/profile')}
+						onclick={() => (menuOpen = false)}
+						class="px-4 py-2 text-sm hover:bg-gray-100"
+					>
+						Profile
+					</a>
+					<button
+						onclick={() => {
+							menuOpen = false
+							handleSignOut()
+						}}
+						class="px-4 py-2 text-sm text-left hover:bg-gray-100 cursor-pointer"
+					>
+						Sign Out
+					</button>
+				</div>
+			{/if}
 		</div>
 	</header>
 
@@ -131,7 +176,7 @@ const cardClass = 'border border-gray-200 rounded-lg p-5'
 			<LoopLink as="a" href="/pours/new">Log a Pour</LoopLink>
 		</main>
 	{:else}
-		<main class="flex-1 flex flex-col gap-8 w-full max-w-6xl py-6">
+		<main class="flex-1 flex flex-col gap-8 w-full max-w-6xl py-6 pb-28">
 			{#if findings.length > 0}
 				<section class="flex flex-col gap-3">
 					<h2 class="text-xl font-bold">What your log says</h2>
@@ -300,8 +345,11 @@ const cardClass = 'border border-gray-200 rounded-lg p-5'
 			</section>
 		</main>
 
-		<footer class="w-full max-w-6xl py-8 flex flex-col items-center gap-3 text-center">
-			<p class="text-gray-500">Ready for another?</p>
+		<footer class="fixed inset-x-0 bottom-0 z-20 flex justify-center pb-5 pt-10">
+			<div
+				class="absolute inset-0 -z-10 bg-gradient-to-t from-off-white from-40% to-transparent"
+				aria-hidden="true"
+			></div>
 			<LoopLink as="a" href="/pours/new">Log a Pour</LoopLink>
 		</footer>
 	{/if}
