@@ -345,11 +345,9 @@ const cardClass = 'border border-gray-200 rounded-lg p-5'
 			</section>
 		</main>
 
-		<footer class="fixed inset-x-0 bottom-0 z-20 flex justify-center pb-5 pt-10">
-			<div
-				class="absolute inset-0 -z-10 bg-gradient-to-t from-off-white from-40% to-transparent"
-				aria-hidden="true"
-			></div>
+		<footer
+			class="fixed inset-x-0 bottom-0 z-20 flex justify-center py-4 bg-off-white/95 backdrop-blur-sm shadow-[0_-4px_16px_rgba(0,0,0,0.08)]"
+		>
 			<LoopLink as="a" href="/pours/new">Log a Pour</LoopLink>
 		</footer>
 	{/if}
