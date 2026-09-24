@@ -1,7 +1,7 @@
 <script lang="ts">
 import { enhance } from '$app/forms'
-import { resolve } from '$app/paths'
 import { Flowers, RatingRow } from '$lib'
+import AppHeader from '$lib/components/AppHeader.svelte'
 import CafeLocationInput from '$lib/components/CafeLocationInput.svelte'
 import { BREW_METHODS, COUNTRIES, GRIND_SIZES, PROCESSES } from '$lib/types/coffee'
 import type { ActionData } from './$types'
@@ -44,10 +44,7 @@ const toggleClass = 'px-4 py-2 border text-sm transition-colors rounded-full bor
 
 <Flowers />
 <section class="min-h-[100dvh] p-6 flex flex-col max-w-lg mx-auto">
-	<header class="mb-10">
-		<a href={resolve('/')} class="text-sm text-gray-500 hover:text-dark-ink">← Back</a>
-		<h1 class="text-5xl mt-3">Log a Pour</h1>
-	</header>
+	<AppHeader title="Log a Pour" backTo="/dashboard" width="max-w-lg" />
 
 	<form
 		method="POST"
@@ -58,7 +55,7 @@ const toggleClass = 'px-4 py-2 border text-sm transition-colors rounded-full bor
 				submitting = false
 			}
 		}}
-		class="flex flex-col gap-10 flex-1"
+		class="flex flex-col gap-10 flex-1 mt-8"
 	>
 		<div class="flex flex-col gap-6">
 			<h2 class={sectionHeadingClass}>Details</h2>
