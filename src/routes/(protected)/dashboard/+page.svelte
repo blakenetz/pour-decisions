@@ -89,11 +89,8 @@ const labelClass = 'text-xs uppercase tracking-widest text-gray-500'
 const cardClass = 'border border-gray-200 rounded-lg p-5'
 </script>
 
-<section class="flex flex-col items-center min-h-[100dvh] p-4">
-	<AppHeader
-		title="Dashboard"
-		width={data.pours.length >= MIN_POURS_FOR_DASHBOARD ? 'max-w-6xl' : 'max-w-2xl'}
-	/>
+<section class="flex flex-col items-center min-h-[100dvh] p-4 w-full max-w-6xl mx-auto">
+	<AppHeader title="Dashboard" />
 
 	{#if data.pours.length === 0}
 		<main class="flex-1 flex flex-col items-center justify-center gap-6 w-full max-w-2xl">

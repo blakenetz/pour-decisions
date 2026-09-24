@@ -6,14 +6,11 @@ import { signOutUser } from '$lib/auth/auth'
 
 let {
 	title,
-	/** Tailwind max-width class, so the bar lines up with the page content below it. */
-	width = 'max-w-2xl',
 	/** Route to the page behind this one; renders a back affordance inside the
 	 *  bar. Resolved here so callers can't pass an unresolved path. */
 	backTo
 }: {
 	title: string
-	width?: string
 	backTo?: Pathname
 } = $props()
 let menuOpen = $state(false)
@@ -25,8 +22,10 @@ async function handleSignOut() {
 }
 </script>
 
+<!-- Spans the full page width inside the page's own padding, so the bar is
+     identical across views regardless of how wide their content is. -->
 <header
-	class="w-full {width} flex items-center justify-between py-3 px-5 my-2 rounded-lg bg-dark-ink text-off-white"
+	class="w-full flex items-center justify-between py-3 px-5 my-2 rounded-lg bg-dark-ink text-off-white"
 >
 	<div class="flex items-center gap-3">
 		{#if backTo}

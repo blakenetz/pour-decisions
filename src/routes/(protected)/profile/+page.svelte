@@ -6,7 +6,7 @@ import type { PageData } from './$types'
 let { data }: { data: PageData } = $props()
 </script>
 
-<section class="flex flex-col items-center min-h-[100dvh] p-4">
+<section class="flex flex-col items-center min-h-[100dvh] p-4 w-full max-w-6xl mx-auto">
 	<AppHeader title="Profile" backTo="/dashboard" />
 
 	<main class="flex-1 flex flex-col gap-8 w-full max-w-2xl py-6">

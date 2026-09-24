@@ -43,8 +43,8 @@ const toggleClass = 'px-4 py-2 border text-sm transition-colors rounded-full bor
 </script>
 
 <Flowers />
-<section class="min-h-[100dvh] p-6 flex flex-col max-w-lg mx-auto">
-	<AppHeader title="Log a Pour" backTo="/dashboard" width="max-w-lg" />
+<section class="flex flex-col items-center min-h-[100dvh] p-4 w-full max-w-6xl mx-auto">
+	<AppHeader title="Log a Pour" backTo="/dashboard" />
 
 	<form
 		method="POST"
@@ -55,7 +55,7 @@ const toggleClass = 'px-4 py-2 border text-sm transition-colors rounded-full bor
 				submitting = false
 			}
 		}}
-		class="flex flex-col gap-10 flex-1 mt-8"
+		class="flex flex-col gap-10 flex-1 w-full max-w-lg mt-8"
 	>
 		<div class="flex flex-col gap-6">
 			<h2 class={sectionHeadingClass}>Details</h2>
