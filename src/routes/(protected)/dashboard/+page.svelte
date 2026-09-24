@@ -1,10 +1,9 @@
 <script lang="ts">
-import { goto } from '$app/navigation'
 import { resolve } from '$app/paths'
 import { LoopLink } from '$lib'
 import cheersImage from '$lib/assets/cup-cheers.png'
 import tableLegsImage from '$lib/assets/table-legs.png'
-import { signOutUser } from '$lib/auth/auth'
+import AppHeader from '$lib/components/AppHeader.svelte'
 import BreakdownChart from '$lib/components/dashboard/BreakdownChart.svelte'
 import NoteGapChart from '$lib/components/dashboard/NoteGapChart.svelte'
 import PourTable from '$lib/components/dashboard/PourTable.svelte'
@@ -30,7 +29,6 @@ import type { PageData } from './$types'
 const MIN_POURS_FOR_DASHBOARD = 11
 
 let { data }: { data: PageData } = $props()
-let menuOpen = $state(false)
 
 let filters = $state<Filters>({})
 let breakdown = $state<DimensionId>('brewMethod')
@@ -85,11 +83,6 @@ function drillInto(name: string) {
 	if (next) breakdown = next
 }
 
-async function handleSignOut() {
-	await signOutUser()
-	await goto(resolve('/'))
-}
-
 const selectClass =
 	'border-b border-dark-ink bg-transparent py-1 text-sm focus:outline-none min-w-32'
 const labelClass = 'text-xs uppercase tracking-widest text-gray-500'
@@ -97,63 +90,10 @@ const cardClass = 'border border-gray-200 rounded-lg p-5'
 </script>
 
 <section class="flex flex-col items-center min-h-[100dvh] p-4">
-	<header
-		class="w-full {data.pours.length >= MIN_POURS_FOR_DASHBOARD
-			? 'max-w-6xl'
-			: 'max-w-2xl'} flex items-center justify-between py-3 px-5 my-2 rounded-lg bg-dark-ink text-off-white"
-	>
-		<h1 class="text-3xl font-bold">Dashboard</h1>
-		<div class="relative">
-			<button
-				aria-label="Menu"
-				aria-expanded={menuOpen}
-				onclick={() => (menuOpen = !menuOpen)}
-				class="p-2 -m-2 cursor-pointer"
-			>
-				<svg
-					width="22"
-					height="22"
-					viewBox="0 0 22 22"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"
-					stroke-linecap="round"
-				>
-					<line x1="2" y1="5" x2="20" y2="5" />
-					<line x1="2" y1="11" x2="20" y2="11" />
-					<line x1="2" y1="17" x2="20" y2="17" />
-				</svg>
-			</button>
-
-			{#if menuOpen}
-				<button
-					aria-label="Close menu"
-					onclick={() => (menuOpen = false)}
-					class="fixed inset-0 z-10 cursor-default"
-				></button>
-				<div
-					class="absolute right-0 top-full mt-2 z-20 w-40 flex flex-col rounded-lg border border-gray-200 bg-off-white text-dark-ink py-1 shadow-lg"
-				>
-					<a
-						href={resolve('/profile')}
-						onclick={() => (menuOpen = false)}
-						class="px-4 py-2 text-sm hover:bg-gray-100"
-					>
-						Profile
-					</a>
-					<button
-						onclick={() => {
-							menuOpen = false
-							handleSignOut()
-						}}
-						class="px-4 py-2 text-sm text-left hover:bg-gray-100 cursor-pointer"
-					>
-						Sign Out
-					</button>
-				</div>
-			{/if}
-		</div>
-	</header>
+	<AppHeader
+		title="Dashboard"
+		width={data.pours.length >= MIN_POURS_FOR_DASHBOARD ? 'max-w-6xl' : 'max-w-2xl'}
+	/>
 
 	{#if data.pours.length === 0}
 		<main class="flex-1 flex flex-col items-center justify-center gap-6 w-full max-w-2xl">

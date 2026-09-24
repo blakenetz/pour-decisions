@@ -9,6 +9,7 @@ export {
 	signInUser,
 	signOutUser
 } from './auth/auth'
+export { default as AppHeader } from './components/AppHeader.svelte'
 export { default as LoopLink } from './components/actions/LoopLink.svelte'
 export { default as OvalButton } from './components/actions/OvalButton.svelte'
 export { default as SquigglyLink } from './components/actions/SquigglyLink.svelte'
