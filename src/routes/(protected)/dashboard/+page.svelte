@@ -345,10 +345,14 @@ const cardClass = 'border border-gray-200 rounded-lg p-5'
 			</section>
 		</main>
 
-		<footer
-			class="fixed inset-x-0 bottom-0 z-20 flex justify-center py-4 bg-off-white/95 backdrop-blur-sm shadow-[0_-4px_16px_rgba(0,0,0,0.08)]"
+		<!-- The only saturated element on an otherwise monochrome page, so the
+		     primary action reads instantly against the charts behind it. -->
+		<a
+			href={resolve('/pours/new')}
+			class="fixed bottom-6 right-6 z-30 flex items-center gap-2 rounded-full bg-accent-peach-500 px-6 py-4 text-lg text-dark-ink shadow-xl ring-2 ring-dark-ink transition-transform duration-150 hover:scale-105 hover:bg-accent-peach-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-dark-ink"
 		>
-			<LoopLink as="a" href="/pours/new">Log a Pour</LoopLink>
-		</footer>
+			<span aria-hidden="true" class="text-2xl leading-none">+</span>
+			Log a Pour
+		</a>
 	{/if}
 </section>
