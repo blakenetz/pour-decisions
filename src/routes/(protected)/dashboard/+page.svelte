@@ -6,6 +6,7 @@ import tableLegsImage from '$lib/assets/table-legs.png'
 import AppHeader from '$lib/components/AppHeader.svelte'
 import BreakdownChart from '$lib/components/dashboard/BreakdownChart.svelte'
 import NoteGapChart from '$lib/components/dashboard/NoteGapChart.svelte'
+import OriginMap from '$lib/components/dashboard/OriginMap.svelte'
 import PourTable from '$lib/components/dashboard/PourTable.svelte'
 import ProfileComparison from '$lib/components/dashboard/ProfileComparison.svelte'
 import RoastQualityScatter from '$lib/components/dashboard/RoastQualityScatter.svelte'
@@ -73,10 +74,13 @@ function applyFinding(finding: Finding) {
 	metricId = 'quality'
 }
 
-function drillInto(name: string) {
-	filters = { ...filters, [breakdown]: name }
+/** Pins `name` on `dimension` (the active breakdown unless told otherwise — the
+ *  map always drills into origin regardless of what's charted). */
+function drillInto(name: string, dimension: DimensionId = breakdown) {
+	filters = { ...filters, [dimension]: name }
 	// Breaking down by the dimension you just pinned would leave a single bar, so
 	// move to the next dimension that still varies within the new slice.
+	if (breakdown !== dimension) return
 	const next = DIMENSION_IDS.find(
 		(id) => id !== breakdown && !filters[id] && optionsFor(id).length > 1
 	)
@@ -240,6 +244,14 @@ const cardClass = 'border border-gray-200 rounded-lg p-5'
 					<BreakdownChart {groups} {metric} onselect={drillInto} />
 					<p class="text-xs text-gray-500 mt-2">{metric.description}</p>
 				</div>
+			</section>
+
+			<section class={cardClass}>
+				<div class="flex items-baseline justify-between gap-4 mb-2">
+					<h3 class="font-semibold">Where your coffee comes from</h3>
+					<span class="text-xs text-gray-400">Click an origin to drill in</span>
+				</div>
+				<OriginMap facts={filtered} {metric} onselect={(country) => drillInto(country, 'country')} />
 			</section>
 
 			<section class="grid gap-6 lg:grid-cols-2">

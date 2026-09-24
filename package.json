@@ -25,8 +25,12 @@
 		"@tailwindcss/forms": "^0.5.11",
 		"@tailwindcss/typography": "^0.5.20",
 		"@tailwindcss/vite": "^4.3.3",
+		"@types/d3-geo": "^3.1.1",
+		"@types/geojson": "^7946.0.16",
 		"@types/google.maps": "^3.66.3",
 		"@types/node": "^26",
+		"@types/topojson-client": "^3.1.5",
+		"@types/topojson-specification": "^1.0.5",
 		"svelte": "^5.57.0",
 		"svelte-check": "^4.7.6",
 		"tailwindcss": "^4.3.3",
@@ -40,8 +44,11 @@
 		"@aws-sdk/lib-dynamodb": "^3.1135.0",
 		"aws-amplify": "^6.20.0",
 		"aws-jwt-verify": "^5.2.1",
+		"d3-geo": "^3.1.1",
 		"layerchart": "^2.5.0",
+		"topojson-client": "^3.1.0",
 		"ulid": "^3.0.2",
+		"world-atlas": "^2.0.2",
 		"zod": "^4.6.5"
 	}
 }
