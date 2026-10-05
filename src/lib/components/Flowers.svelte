@@ -39,6 +39,9 @@ const flowers = [
 		position: absolute;
 		bottom: 0;
 		display: block;
-		opacity: 0.85;
+		/* Push the flowers into the background: dim them and add a soft blur so
+		   they read as a distant, out-of-focus layer behind the content. */
+		opacity: 0.35;
+		filter: blur(2px);
 	}
 </style>
