@@ -202,11 +202,26 @@ export interface TastingEntry {
 
 export type CreateTastingInput = Omit<TastingEntry, 'userId' | 'entryId' | 'createdAt'>
 
-export const createTastingInputSchema = z.object({
-	beverageType: z.literal('coffee'),
-	details: tastingDetailsSchema.optional(),
-	notes: tastingNotesSchema.optional()
-})
+export const createTastingInputSchema = z
+	.object({
+		beverageType: z.literal('coffee'),
+		details: tastingDetailsSchema.optional(),
+		notes: tastingNotesSchema.optional()
+	})
+	// A pour is only worth keeping if it can be rated and identified, so the three
+	// up-front fields are required here (not just in the UI) to guard the API too.
+	.refine((input) => input.notes?.overallRating !== undefined, {
+		message: 'Add an overall rating',
+		path: ['notes', 'overallRating']
+	})
+	.refine((input) => Boolean(input.details?.roaster || input.details?.productName), {
+		message: 'Add a roaster or coffee name',
+		path: ['details', 'roaster']
+	})
+	.refine((input) => input.details?.brewMethod !== undefined, {
+		message: 'Add a brew method',
+		path: ['details', 'brewMethod']
+	})
 
 /** The day a pour belongs to on a timeline: the brew date the taster entered, or
  *  the server write time when they left it blank. Every time series uses this —
