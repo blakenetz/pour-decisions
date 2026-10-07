@@ -31,6 +31,22 @@ A palate analytics app that helps users track and understand their taste prefere
   visible in `git log`. Body explains *why*, not a line-by-line diff narration.
 - Never commit `.env*` (already gitignored) or leave the tree dirty at a stopping point.
 
+### Versioning
+
+Every PR is a release and bumps `version` in the root `package.json` exactly once (not
+`infra/package.json`). The project stays pre-1.0: **never set the version to `1.0.0` or higher.**
+
+- Bump relative to the version on `main`, not per commit: a PR with several commits still gets
+  one bump. If the branch already bumped past `main`, don't bump again; only raise it to a higher
+  level if new commits need one (e.g. patch → minor).
+- Pick the level from the PR's highest-impact change (pre-1.0 semver: anything breaking goes
+  in the minor slot, never the major):
+  - **minor** (`0.Y.0`): any `feat:`, or any breaking change (removed/renamed env vars, schema
+    migrations, changed routes/APIs). This also covers what would otherwise be a major bump.
+  - **patch** (`0.y.Z`): only `fix:`, `refactor:`, `docs:`, `style:`, `chore:` changes.
+- Bump in its own commit, `chore: release v0.Y.Z`, as the last commit before opening or
+  updating the PR.
+
 ---
 
 ## Tasting data model
