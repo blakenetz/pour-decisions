@@ -44,8 +44,10 @@ Every PR is a release and bumps `version` in the root `package.json` exactly onc
   - **minor** (`0.Y.0`): any `feat:`, or any breaking change (removed/renamed env vars, schema
     migrations, changed routes/APIs). This also covers what would otherwise be a major bump.
   - **patch** (`0.y.Z`): only `fix:`, `refactor:`, `docs:`, `style:`, `chore:` changes.
-- Bump in its own commit, `chore: release v0.Y.Z`, as the last commit before opening or
-  updating the PR.
+- Bump in its own commit, `chore: release v0.Y.Z`.
+- The PR title starts with the release version: `Release v0.Y.Z: <summary>` (e.g.
+  `Release v0.1.0: deploy pipeline, PWA fixes`). Whenever the bump changes, update the title in
+  the same push so it always matches `package.json`.
 
 ---
 
