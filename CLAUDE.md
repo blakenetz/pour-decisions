@@ -9,8 +9,8 @@ A palate analytics app that helps users track and understand their taste prefere
 
 ## Core Features
 
-- **Tasting form:** A multi-field input form for logging coffee tastings (roaster, origin, brew method, boldness, acidity, sweetness, flavor notes, overall rating, free-text notes, etc.).
-- **Dashboard (`/dashboard`):** Authenticated landing page that aggregates and visualizes tasting data — trends over time, favorite roasters, flavor profile breakdowns, etc.
+- **Tasting form:** A multi-field input form for logging coffee tastings (roaster, origin country + region, process, brew method, grind size, brew time, roast level, the ten 1–5 sub-ratings, taster's own flavor tags, would-buy-again, free-text notes).
+- **Dashboard (`/dashboard`):** Authenticated landing page built around drill-down. A flat fact table (one row per pour) is sent to the client and every chart, filter and finding derives from it, so slicing never costs a round trip. See "Tasting data model" below.
 - **Auth:** Email/password and social sign-in (Google, GitHub, Apple) via AWS Amplify/Cognito.
 
 ## Tech Stack
@@ -19,6 +19,70 @@ A palate analytics app that helps users track and understand their taste prefere
 - Tailwind CSS
 - AWS Amplify (Cognito auth)
 - Zod for validation
+- LayerChart for visualization
+
+## Workflow
+
+- Commit at each logical checkpoint without waiting to be asked: after a coherent
+  feature/fix/refactor is verified (typecheck + smoke test/e2e pass), commit before
+  starting the next unrelated concern. Don't let unrelated changes pile up uncommitted.
+- Split commits by concern (e.g. schema/capture change vs. UI rebuild), not by turn.
+- Match the existing `type: summary` convention (`feat:`, `fix:`, `refactor:`, `docs:`)
+  visible in `git log`. Body explains *why*, not a line-by-line diff narration.
+- Never commit `.env*` (already gitignored) or leave the tree dirty at a stopping point.
+
+### Versioning
+
+Every PR is a release and bumps `version` in the root `package.json` exactly once (not
+`infra/package.json`). The project stays pre-1.0: **never set the version to `1.0.0` or higher.**
+
+- Bump relative to the version on `main`, not per commit: a PR with several commits still gets
+  one bump. If the branch already bumped past `main`, don't bump again; only raise it to a higher
+  level if new commits need one (e.g. patch → minor).
+- Pick the level from the PR's highest-impact change (pre-1.0 semver: anything breaking goes
+  in the minor slot, never the major):
+  - **minor** (`0.Y.0`): any `feat:`, or any breaking change (removed/renamed env vars, schema
+    migrations, changed routes/APIs). This also covers what would otherwise be a major bump.
+  - **patch** (`0.y.Z`): only `fix:`, `refactor:`, `docs:`, `style:`, `chore:` changes.
+- Bump in its own commit, `chore: release v0.Y.Z`.
+- The PR title starts with the release version: `Release v0.Y.Z: <summary>` (e.g.
+  `Release v0.1.0: deploy pipeline, PWA fixes`). Whenever the bump changes, update the title in
+  the same push so it always matches `package.json`.
+
+---
+
+## Tasting data model
+
+### Quality vs. intensity — do not re-merge these
+
+Each pour carries ten 1–5 sub-ratings, and they measure two different things:
+
+- **Evaluative** (`aromaClarity`, `flavorComplexity`, `flavorSweetness`, `acidityQuality`,
+  `finishFlavor`) — how *good* the cup is. Averaged into the persisted `qualityScore`.
+- **Descriptive** (`aromaIntensity`, `acidityIntensity`, `bodyWeight`, `bodyTactile`,
+  `finishLength`) — how *loud* the cup is. Averaged into the persisted `intensityScore`.
+
+Averaging all ten together (as an earlier `avgCategoryRating` did) asserts that a louder
+coffee is a better one, which turns every "best brew method / best roast" claim into a
+statement about volume rather than preference. Rank with `qualityScore`; chart
+`intensityScore` as a profile shape.
+
+### Groupable dimensions
+
+Anything the dashboard groups by is an enum in `src/lib/types/coffee.ts` — free text
+fragments into ungroupable variants. `country` is separate from `region` so origin-level
+questions ("light or dark for Ethiopia?") are answerable. `grindSize` is ordinal: use
+`grindRank()` for axis ordering, since alphabetically "Coarse" precedes "Extra Fine".
+
+Flavor tags are normalized (`normalizeNote`) at write time so casing never splits a group.
+
+### Scripts
+
+- `pnpm seed` — regenerates dev pours. Models a simulated palate (grind × method,
+  origin × roast, process character, freshness curve) rather than randomizing fields
+  independently, because uncorrelated data makes every chart a flat line and hides
+  whether a visualization actually works. Deterministic per user id.
+- `pnpm migrate` — one-shot schema migration; dry-run by default, `--apply` to write.
 
 ---
 

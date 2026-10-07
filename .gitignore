@@ -7,6 +7,17 @@ node_modules
 .wrangler
 /.svelte-kit
 /build
+/.lambda
+
+# Infra (CDK)
+cdk.out
+cdk.web.out
+
+# Playwright
+/test-results
+/playwright-report
+/blob-report
+/.playwright
 
 # OS
 .DS_Store

@@ -6,6 +6,7 @@ import { browser } from '$app/environment'
 import { goto } from '$app/navigation'
 import { resolve } from '$app/paths'
 import { initAmplify } from '$lib/auth/amplifyClient'
+import { clearStaleSession } from '$lib/auth/auth'
 import Modal from './Modal.svelte'
 
 let {
@@ -138,6 +139,7 @@ async function handleConfirm(e: Event) {
 	errorMsg = ''
 	try {
 		await confirmSignUp({ username: email, confirmationCode: code })
+		await clearStaleSession()
 		await signIn({ username: email, password })
 		handleClose()
 		await goto(resolve('/dashboard'))

@@ -30,10 +30,11 @@ export function initAmplify() {
 						oauth: {
 							domain: env.PUBLIC_COGNITO_DOMAIN,
 							scopes: env.PUBLIC_OAUTH_SCOPES?.split(',') || ['email', 'openid', 'profile'],
-							redirectSignIn: [
-								env.PUBLIC_OAUTH_REDIRECT_SIGNIN || 'http://localhost:8008/auth/callback'
-							],
-							redirectSignOut: [env.PUBLIC_OAUTH_REDIRECT_SIGNOUT || 'http://localhost:8008/'],
+							// Derived from the current origin so every environment (localhost, dev, prod)
+							// works without per-deploy config; each origin must still be registered as a
+							// callback/logout URL on the Cognito app client (infra/lib/pour-decisions-stack.ts).
+							redirectSignIn: [`${window.location.origin}/auth/callback`],
+							redirectSignOut: [`${window.location.origin}/`],
 							responseType: 'code' as const
 						}
 					}

@@ -3,7 +3,7 @@ import { redirect } from '@sveltejs/kit'
 import { env } from '$env/dynamic/private'
 import type { RequestHandler } from './$types'
 
-export const GET: RequestHandler = async ({ cookies }) => {
+export const GET: RequestHandler = async ({ url, cookies }) => {
 	const clientId = env.GITHUB_CLIENT_ID
 	if (!clientId) {
 		throw new Error('GITHUB_CLIENT_ID is not configured')
@@ -20,7 +20,8 @@ export const GET: RequestHandler = async ({ cookies }) => {
 
 	const params = new URLSearchParams({
 		client_id: clientId,
-		redirect_uri: `${env.GITHUB_REDIRECT_URI || 'http://localhost:8008/api/auth/github/callback'}`,
+		// Must match the callback URL registered on this environment's GitHub OAuth app.
+		redirect_uri: `${url.origin}/api/auth/github/callback`,
 		scope: 'user:email',
 		state
 	})
