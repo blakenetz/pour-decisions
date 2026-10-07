@@ -37,6 +37,8 @@ export const actions: Actions = {
 			roasterNotes: parseNotes(str(data, 'roasterNotes')),
 			brewMethod: str(data, 'brewMethod'),
 			grindSize: str(data, 'grindSize'),
+			grinder: str(data, 'grinder'),
+			grindSetting: num(data, 'grindSetting'),
 			coffeeGrams: num(data, 'coffeeGrams'),
 			waterGrams: num(data, 'waterGrams'),
 			waterTempF: num(data, 'waterTempF'),

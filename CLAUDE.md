@@ -91,6 +91,16 @@ fragments into ungroupable variants. `country` is separate from `region` so orig
 questions ("light or dark for Ethiopia?") are answerable. `grindSize` is ordinal: use
 `grindRank()` for axis ordering, since alphabetically "Coarse" precedes "Extra Fine".
 
+### Grinders
+
+Grinder dials aren't comparable (Encore 1–40, Ode 1–11, clicks from zero on hand grinders), so a
+pour records the catalog `grinder` (`src/lib/types/grinders.ts`) plus its exact `grindSetting`,
+and `grindSize` is **always derived** from them via that grinder's `bandUpperBounds` — never
+accepted from input when a grinder is set. That keeps every grinder on the shared fine → coarse
+axis the dashboard groups and ranks by. Without a grinder the taster picks `grindSize` directly.
+Adding a grinder is one catalog entry; derive its band bounds from a published setting → micron
+model, not by eye.
+
 Flavor tags are normalized (`normalizeNote`) at write time so casing never splits a group.
 
 ### Scripts

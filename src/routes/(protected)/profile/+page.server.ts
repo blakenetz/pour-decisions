@@ -36,6 +36,8 @@ export const actions: Actions = {
 		const parsed = pourDefaultsSchema.safeParse({
 			brewMethod: formString(data, 'brewMethod'),
 			grindSize: formString(data, 'grindSize'),
+			grinder: formString(data, 'grinder'),
+			grindSetting: formNumber(data, 'grindSetting'),
 			coffeeGrams: formNumber(data, 'coffeeGrams'),
 			waterGrams: formNumber(data, 'waterGrams'),
 			waterTempF: formNumber(data, 'waterTempF'),

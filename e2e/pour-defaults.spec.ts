@@ -65,6 +65,36 @@ test('saved defaults fill the pour form only when asked, and clearing them remov
 	await expect(page.getByRole('link', { name: 'profile' })).toBeVisible()
 })
 
+test('a grinder replaces grind size with its own dial, filed under a shared band', async ({
+	page
+}) => {
+	await loginAs(page, process.env.E2E_ZERO_EMAIL as string)
+
+	await open(page, '/profile')
+	await page.locator('#grinder').selectOption('baratza-encore')
+	await expect(page.locator('#grindSize')).toHaveCount(0)
+	await expect(page.getByLabel('Setting (1–40)')).toBeVisible()
+	await page.locator('#grindSetting').fill('14')
+	await expect(page.getByText('≈ Medium-Fine')).toBeVisible()
+	await saveDefaults(page)
+
+	await open(page, '/pours/new')
+	await page.getByRole('button', { name: 'Use my brew defaults' }).click()
+	await expect(page.locator('#grinder')).toHaveValue('baratza-encore')
+	await expect(page.locator('#grindSetting')).toHaveValue('14')
+	await page.locator('#grindSetting').fill('28')
+	await expect(page.getByText('≈ Coarse')).toBeVisible()
+
+	// Back to no specific grinder: the descriptive sizes return, and the defaults are cleared.
+	await open(page, '/profile')
+	await page.locator('#grinder').selectOption('')
+	await expect(page.locator('#grindSetting')).toHaveCount(0)
+	await expect(page.locator('#grindSize')).toHaveValue('')
+	await saveDefaults(page)
+	await open(page, '/pours/new')
+	await expect(page.getByRole('button', { name: 'Use my brew defaults' })).toHaveCount(0)
+})
+
 test('profile rejects a default recipe with less water than coffee', async ({ page }) => {
 	await loginAs(page, process.env.E2E_ZERO_EMAIL as string)
 

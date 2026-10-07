@@ -1,14 +1,23 @@
 <script lang="ts">
+import { untrack } from 'svelte'
 import { enhance } from '$app/forms'
 import { LoopLink } from '$lib'
 import AppHeader from '$lib/components/AppHeader.svelte'
 import BrewTimeInput from '$lib/components/BrewTimeInput.svelte'
-import { BREW_METHODS, GRIND_SIZES } from '$lib/types/coffee'
+import GrindInput from '$lib/components/GrindInput.svelte'
+import { BREW_METHODS } from '$lib/types/coffee'
+import type { GrinderId } from '$lib/types/grinders'
 import type { ActionData, PageData } from './$types'
 
 let { data, form }: { data: PageData; form: ActionData } = $props()
 
 let saving = $state(false)
+
+// Seeded once from the saved defaults; after that the inputs are the source of truth.
+const saved = untrack(() => data.defaults)
+let grinder: GrinderId | '' = $state(saved.grinder ?? '')
+let grindSetting: number | null = $state(saved.grindSetting ?? null)
+let grindSize = $state(saved.grinder ? '' : (saved.grindSize ?? ''))
 
 const inputClass =
 	'border-b border-dark-ink bg-transparent py-2 focus:outline-none placeholder:text-gray-300'
@@ -72,17 +81,16 @@ const labelClass = 'text-xs uppercase tracking-widest text-gray-500'
 						{/each}
 					</select>
 				</div>
-
-				<div class="flex flex-col gap-1">
-					<label for="grindSize" class={labelClass}>Grind Size</label>
-					<select id="grindSize" name="grindSize" class={inputClass} value={data.defaults.grindSize ?? ''}>
-						<option value="">No default</option>
-						{#each GRIND_SIZES as size (size)}
-							<option value={size}>{size}</option>
-						{/each}
-					</select>
-				</div>
 			</div>
+
+			<GrindInput
+				bind:grinder
+				bind:grindSize
+				bind:grindSetting
+				sizePlaceholder="No default"
+				{inputClass}
+				{labelClass}
+			/>
 
 			<div class="grid grid-cols-3 gap-6">
 				<div class="flex flex-col gap-1">

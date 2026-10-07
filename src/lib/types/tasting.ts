@@ -1,5 +1,6 @@
 import { z } from 'zod'
-import { BREW_METHODS, COUNTRIES, GRIND_SIZES, PROCESSES } from './coffee'
+import { BREW_METHODS, COUNTRIES, GRIND_SIZES, type GrindSize, PROCESSES } from './coffee'
+import { GRINDER_IDS, GRINDERS, type GrinderId, grindBand } from './grinders'
 
 export type BeverageType = 'coffee'
 
@@ -22,7 +23,13 @@ export interface TastingDetails {
 	/** Normalized tags the roaster printed on the bag, e.g. ["raspberry", "vanilla"] */
 	roasterNotes?: string[]
 	brewMethod?: string
+	/** Shared fine → coarse band ({@link GRIND_SIZES}). With a {@link grinder} it is always
+	 *  derived from {@link grindSetting}; without one the taster picks it directly. */
 	grindSize?: string
+	/** Catalog grinder ({@link GRINDERS}) the coffee was ground on. */
+	grinder?: string
+	/** The exact dial setting on {@link grinder}, in that grinder's own units. */
+	grindSetting?: number
 	coffeeGrams?: number
 	waterGrams?: number
 	waterTempF?: number
@@ -48,6 +55,8 @@ const tastingDetailsObject = z.object({
 	roasterNotes: z.array(z.string().trim().min(1).max(60)).max(20).optional(),
 	brewMethod: z.enum(BREW_METHODS).optional(),
 	grindSize: z.enum(GRIND_SIZES).optional(),
+	grinder: z.enum(GRINDER_IDS).optional(),
+	grindSetting: z.number().optional(),
 	coffeeGrams: z.number().positive().max(2000).optional(),
 	waterGrams: z.number().positive().max(5000).optional(),
 	waterTempF: z.number().min(32).max(220).optional(),
@@ -74,6 +83,47 @@ const waterCoversCoffeeIssue = {
 	path: ['waterGrams']
 }
 
+interface GrindRecipe {
+	grinder?: GrinderId
+	grindSetting?: number
+	grindSize?: GrindSize
+}
+
+/** A setting only means something on a known grinder's dial, and must be a position on it. */
+function checkGrindSetting(recipe: GrindRecipe, ctx: z.RefinementCtx): void {
+	if (recipe.grindSetting === undefined) return
+	if (!recipe.grinder) {
+		ctx.addIssue({
+			code: 'custom',
+			message: 'Pick the grinder this setting is for',
+			path: ['grinder']
+		})
+		return
+	}
+	const { name, min, max, step } = GRINDERS[recipe.grinder]
+	const steps = (recipe.grindSetting - min) / step
+	if (
+		recipe.grindSetting < min ||
+		recipe.grindSetting > max ||
+		Math.abs(steps - Math.round(steps)) > 1e-9
+	) {
+		ctx.addIssue({
+			code: 'custom',
+			message: `${name} settings run ${min}–${max} in steps of ${step}`,
+			path: ['grindSetting']
+		})
+	}
+}
+
+/** With a grinder the band always comes from its setting, never from input, so the dashboard's
+ *  fine → coarse axis can't disagree with the dial. */
+function withGrindBand<T extends GrindRecipe>(recipe: T): T {
+	if (!recipe.grinder) return recipe
+	const grindSize =
+		recipe.grindSetting === undefined ? undefined : grindBand(recipe.grinder, recipe.grindSetting)
+	return { ...recipe, grindSize }
+}
+
 export const tastingDetailsSchema = tastingDetailsObject
 	.refine(waterCoversCoffee, waterCoversCoffeeIssue)
 	.refine(
@@ -83,15 +133,20 @@ export const tastingDetailsSchema = tastingDetailsObject
 			details.brewDate >= details.roastDate,
 		{ message: 'Brew date cannot be before the roast date', path: ['brewDate'] }
 	)
+	.superRefine(checkGrindSetting)
+	.transform(withGrindBand)
 
 /**
- * The brew setup a user saves on their profile to pre-fill the pour form. Only equipment and
- * recipe fields: the coffee itself changes with every bag, and defaulting ratings would bias
- * the scores the dashboard ranks by. Validated with the same rules as a pour's details.
+ * The brew setup a user saves on their profile and can apply to the pour form with one click.
+ * Only equipment and recipe fields: the coffee itself changes with every bag, and defaulting
+ * ratings would bias the scores the dashboard ranks by. Validated with the same rules as a
+ * pour's details.
  */
 export const pourDefaultsSchema = tastingDetailsObject
 	.pick({
 		brewMethod: true,
+		grinder: true,
+		grindSetting: true,
 		grindSize: true,
 		coffeeGrams: true,
 		waterGrams: true,
@@ -100,6 +155,8 @@ export const pourDefaultsSchema = tastingDetailsObject
 		location: true
 	})
 	.refine(waterCoversCoffee, waterCoversCoffeeIssue)
+	.superRefine(checkGrindSetting)
+	.transform(withGrindBand)
 
 export type PourDefaults = z.infer<typeof pourDefaultsSchema>
 

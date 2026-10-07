@@ -5,7 +5,9 @@ import { Flowers, RatingRow } from '$lib'
 import AppHeader from '$lib/components/AppHeader.svelte'
 import BrewTimeInput from '$lib/components/BrewTimeInput.svelte'
 import CafeLocationInput from '$lib/components/CafeLocationInput.svelte'
-import { BREW_METHODS, COUNTRIES, GRIND_SIZES, PROCESSES } from '$lib/types/coffee'
+import GrindInput from '$lib/components/GrindInput.svelte'
+import { BREW_METHODS, COUNTRIES, PROCESSES } from '$lib/types/coffee'
+import type { GrinderId } from '$lib/types/grinders'
 import type { ActionData, PageData } from './$types'
 
 let { data, form }: { data: PageData; form: ActionData } = $props()
@@ -40,6 +42,8 @@ let submitting = $state(false)
 let clientError = $state('')
 
 // Brew setup fields are bound so "Use my brew defaults" can fill them.
+let grinder: GrinderId | '' = $state('')
+let grindSetting: number | null = $state(null)
 let grindSize = $state('')
 let coffeeGrams: number | null = $state(null)
 let waterGrams: number | null = $state(null)
@@ -53,7 +57,11 @@ let detailsOpen = $state(false)
 function applyDefaults() {
 	if (defaults.brewMethod) brewMethod = defaults.brewMethod
 	if (defaults.location) location = defaults.location
-	if (defaults.grindSize) grindSize = defaults.grindSize
+	if (defaults.grinder) {
+		grinder = defaults.grinder
+		grindSetting = defaults.grindSetting ?? null
+	}
+	if (defaults.grindSize && !defaults.grinder) grindSize = defaults.grindSize
 	if (defaults.coffeeGrams !== undefined) coffeeGrams = defaults.coffeeGrams
 	if (defaults.waterGrams !== undefined) waterGrams = defaults.waterGrams
 	if (defaults.waterTempF !== undefined) waterTempF = defaults.waterTempF
@@ -296,20 +304,14 @@ const toggleClass = 'px-4 py-2 border text-sm transition-colors rounded-full bor
 				<div class="flex flex-col gap-6">
 					<h3 class={sectionHeadingClass}>Brew</h3>
 
-					<div class="flex flex-col gap-1">
-						<label for="grindSize" class={labelClass}>Grind Size</label>
-						<select
-							id="grindSize"
-							name="grindSize"
-							class={inputClass}
-							bind:value={grindSize}
-						>
-							<option value="" disabled>Select a size</option>
-							{#each GRIND_SIZES as size (size)}
-								<option value={size}>{size}</option>
-							{/each}
-						</select>
-					</div>
+					<GrindInput
+						bind:grinder
+						bind:grindSize
+						bind:grindSetting
+						sizePlaceholder="Select a size"
+						{inputClass}
+						{labelClass}
+					/>
 
 					<div class="grid grid-cols-3 gap-6">
 						<div class="flex flex-col gap-1">
