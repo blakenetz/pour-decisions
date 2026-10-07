@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { BREW_METHODS, COUNTRIES, GRIND_SIZES, type GrindSize, PROCESSES } from './coffee'
-import { dialPosition, GRINDER_IDS, GRINDERS, type GrinderId, grindBand } from './grinders'
+import { dialPosition, GRINDER_IDS, type GrinderId, grindBand, grinderName } from './grinders'
 
 export type BeverageType = 'coffee'
 
@@ -103,7 +103,7 @@ function checkGrindSetting(recipe: GrindRecipe, ctx: z.RefinementCtx): void {
 	if (!dialPosition(recipe.grinder, recipe.grindSetting)) {
 		ctx.addIssue({
 			code: 'custom',
-			message: `${GRINDERS[recipe.grinder].name} has no setting "${recipe.grindSetting}"`,
+			message: `${grinderName(recipe.grinder)} has no setting "${recipe.grindSetting}"`,
 			path: ['grindSetting']
 		})
 	}

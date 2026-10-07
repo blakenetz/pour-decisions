@@ -8,7 +8,10 @@ export interface DialPosition {
 }
 
 export interface Grinder {
-	name: string
+	/** Grouping label in the grinder picker, e.g. "Baratza". */
+	brand: string
+	/** Model within the brand, e.g. "Encore ESP". */
+	model: string
 	/** Compact label for tables, e.g. "Encore". */
 	shortName: string
 	/** What the dial counts: a numbered setting, or clicks from fully closed burrs. */
@@ -55,7 +58,8 @@ function subdivided(min: number, max: number, marks: number): DialPosition[] {
  */
 export const GRINDERS = {
 	'baratza-encore': {
-		name: 'Baratza Encore',
+		brand: 'Baratza',
+		model: 'Encore',
 		shortName: 'Encore',
 		unit: 'Setting',
 		positions: numbered(0, 40),
@@ -65,7 +69,8 @@ export const GRINDERS = {
 		]
 	},
 	'baratza-encore-esp': {
-		name: 'Baratza Encore ESP',
+		brand: 'Baratza',
+		model: 'Encore ESP',
 		shortName: 'Encore ESP',
 		unit: 'Setting',
 		positions: numbered(0, 40),
@@ -77,7 +82,8 @@ export const GRINDERS = {
 		]
 	},
 	'baratza-virtuoso-plus': {
-		name: 'Baratza Virtuoso+',
+		brand: 'Baratza',
+		model: 'Virtuoso+',
 		shortName: 'Virtuoso+',
 		unit: 'Setting',
 		positions: numbered(0, 40),
@@ -87,7 +93,8 @@ export const GRINDERS = {
 		]
 	},
 	'breville-smart-grinder-pro': {
-		name: 'Breville / Sage Smart Grinder Pro',
+		brand: 'Breville / Sage',
+		model: 'Smart Grinder Pro',
 		shortName: 'Smart Grinder Pro',
 		unit: 'Setting',
 		positions: numbered(1, 60),
@@ -97,7 +104,8 @@ export const GRINDERS = {
 		]
 	},
 	'capresso-infinity': {
-		name: 'Capresso Infinity',
+		brand: 'Capresso',
+		model: 'Infinity',
 		shortName: 'Infinity',
 		unit: 'Setting',
 		positions: numbered(1, 16),
@@ -107,7 +115,8 @@ export const GRINDERS = {
 		]
 	},
 	'comandante-c40-mk4': {
-		name: 'Comandante C40 MK4',
+		brand: 'Comandante',
+		model: 'C40 MK4',
 		shortName: 'C40',
 		unit: 'Clicks',
 		positions: numbered(0, 40),
@@ -117,7 +126,8 @@ export const GRINDERS = {
 		]
 	},
 	'fellow-ode-gen-2': {
-		name: 'Fellow Ode Gen 2',
+		brand: 'Fellow',
+		model: 'Ode Gen 2',
 		shortName: 'Ode',
 		unit: 'Setting',
 		// 31 settings: 1–11 with two marks between numbers.
@@ -128,7 +138,8 @@ export const GRINDERS = {
 		]
 	},
 	'fellow-opus': {
-		name: 'Fellow Opus',
+		brand: 'Fellow',
+		model: 'Opus',
 		shortName: 'Opus',
 		unit: 'Setting',
 		// Outer ring only: 1–11 with three marks between numbers. The inner espresso ring isn't
@@ -140,7 +151,8 @@ export const GRINDERS = {
 		]
 	},
 	'oxo-conical-burr': {
-		name: 'OXO Brew Conical Burr',
+		brand: 'OXO',
+		model: 'Brew Conical Burr',
 		shortName: 'OXO',
 		unit: 'Setting',
 		positions: numbered(1, 15),
@@ -150,7 +162,8 @@ export const GRINDERS = {
 		]
 	},
 	'timemore-c2': {
-		name: 'Timemore Chestnut C2',
+		brand: 'Timemore',
+		model: 'Chestnut C2',
 		shortName: 'C2',
 		unit: 'Clicks',
 		positions: numbered(0, 30),
@@ -160,7 +173,8 @@ export const GRINDERS = {
 		]
 	},
 	'timemore-c3': {
-		name: 'Timemore Chestnut C3',
+		brand: 'Timemore',
+		model: 'Chestnut C3',
 		shortName: 'C3',
 		unit: 'Clicks',
 		positions: numbered(0, 24),
@@ -170,7 +184,8 @@ export const GRINDERS = {
 		]
 	},
 	'wilfa-svart-aroma': {
-		name: 'Wilfa Svart Aroma',
+		brand: 'Wilfa',
+		model: 'Svart Aroma',
 		shortName: 'Svart',
 		unit: 'Setting',
 		positions: numbered(1, 18),
@@ -184,6 +199,29 @@ export const GRINDERS = {
 export type GrinderId = keyof typeof GRINDERS
 
 export const GRINDER_IDS = Object.keys(GRINDERS) as [GrinderId, ...GrinderId[]]
+
+export interface GrinderBrand {
+	brand: string
+	models: { id: GrinderId; model: string }[]
+}
+
+/** The catalog grouped by brand, in catalog order, for the grinder picker. */
+export const GRINDERS_BY_BRAND: readonly GrinderBrand[] = GRINDER_IDS.reduce<GrinderBrand[]>(
+	(groups, id) => {
+		const { brand, model } = GRINDERS[id]
+		const group = groups.find((g) => g.brand === brand)
+		if (group) group.models.push({ id, model })
+		else groups.push({ brand, models: [{ id, model }] })
+		return groups
+	},
+	[]
+)
+
+/** Full display name, e.g. "Baratza Encore ESP". */
+export function grinderName(grinderId: GrinderId): string {
+	const { brand, model } = GRINDERS[grinderId]
+	return `${brand} ${model}`
+}
 
 /**
  * Upper micron bound of each {@link GRIND_SIZES} band, from Honest Coffee Guide's definitions

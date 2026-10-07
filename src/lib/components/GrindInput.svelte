@@ -1,6 +1,6 @@
 <script lang="ts">
 import { GRIND_SIZES } from '$lib/types/coffee'
-import { GRINDERS, type GrinderId, grindBand } from '$lib/types/grinders'
+import { GRINDERS, GRINDERS_BY_BRAND, type GrinderId, grindBand } from '$lib/types/grinders'
 
 let {
 	grinder = $bindable(''),
@@ -40,8 +40,12 @@ const band = $derived(grinder && grindSetting ? grindBand(grinder, grindSetting)
 			onchange={() => (grindSetting = '')}
 		>
 			<option value="">No specific grinder</option>
-			{#each Object.entries(GRINDERS) as [id, { name }] (id)}
-				<option value={id}>{name}</option>
+			{#each GRINDERS_BY_BRAND as { brand, models } (brand)}
+				<optgroup label={brand}>
+					{#each models as { id, model } (id)}
+						<option value={id}>{model}</option>
+					{/each}
+				</optgroup>
 			{/each}
 		</select>
 	</div>
