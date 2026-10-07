@@ -1,5 +1,6 @@
 import { z } from 'zod'
-import { BREW_METHODS, COUNTRIES, GRIND_SIZES, PROCESSES } from './coffee'
+import { BREW_METHODS, COUNTRIES, GRIND_SIZES, type GrindSize, PROCESSES } from './coffee'
+import { dialPosition, GRINDER_IDS, type GrinderId, grindBand, grinderName } from './grinders'
 
 export type BeverageType = 'coffee'
 
@@ -22,7 +23,13 @@ export interface TastingDetails {
 	/** Normalized tags the roaster printed on the bag, e.g. ["raspberry", "vanilla"] */
 	roasterNotes?: string[]
 	brewMethod?: string
+	/** Shared fine → coarse band ({@link GRIND_SIZES}). With a {@link grinder} it is always
+	 *  derived from {@link grindSetting}; without one the taster picks it directly. */
 	grindSize?: string
+	/** Catalog grinder ({@link GRINDERS}) the coffee was ground on. */
+	grinder?: string
+	/** The exact dial setting on {@link grinder} as written for that dial, e.g. "14" or "4.2". */
+	grindSetting?: string
 	coffeeGrams?: number
 	waterGrams?: number
 	waterTempF?: number
@@ -38,36 +45,81 @@ export interface TastingDetails {
 	locationLng?: number
 }
 
-export const tastingDetailsSchema = z
-	.object({
-		roaster: z.string().trim().min(1).max(200).optional(),
-		productName: z.string().trim().min(1).max(200).optional(),
-		country: z.enum(COUNTRIES).optional(),
-		region: z.string().trim().min(1).max(200).optional(),
-		process: z.enum(PROCESSES).optional(),
-		roastLevel: z.number().int().min(1).max(10).optional(),
-		roasterNotes: z.array(z.string().trim().min(1).max(60)).max(20).optional(),
-		brewMethod: z.enum(BREW_METHODS).optional(),
-		grindSize: z.enum(GRIND_SIZES).optional(),
-		coffeeGrams: z.number().positive().max(2000).optional(),
-		waterGrams: z.number().positive().max(5000).optional(),
-		waterTempF: z.number().min(32).max(220).optional(),
-		brewTimeSeconds: z.number().int().positive().max(86_400).optional(),
-		roastDate: z.iso.date().optional(),
-		brewDate: z.iso.date().optional(),
-		location: z.enum(['home', 'out']).optional(),
-		locationName: z.string().trim().min(1).max(200).optional(),
-		locationAddress: z.string().trim().min(1).max(300).optional(),
-		locationLat: z.number().min(-90).max(90).optional(),
-		locationLng: z.number().min(-180).max(180).optional()
-	})
-	.refine(
-		(details) =>
-			details.coffeeGrams === undefined ||
-			details.waterGrams === undefined ||
-			details.waterGrams >= details.coffeeGrams,
-		{ message: 'Water weight must be at least the coffee weight', path: ['waterGrams'] }
+const tastingDetailsObject = z.object({
+	roaster: z.string().trim().min(1).max(200).optional(),
+	productName: z.string().trim().min(1).max(200).optional(),
+	country: z.enum(COUNTRIES).optional(),
+	region: z.string().trim().min(1).max(200).optional(),
+	process: z.enum(PROCESSES).optional(),
+	roastLevel: z.number().int().min(1).max(10).optional(),
+	roasterNotes: z.array(z.string().trim().min(1).max(60)).max(20).optional(),
+	brewMethod: z.enum(BREW_METHODS).optional(),
+	grindSize: z.enum(GRIND_SIZES).optional(),
+	grinder: z.enum(GRINDER_IDS).optional(),
+	grindSetting: z.string().trim().min(1).max(20).optional(),
+	coffeeGrams: z.number().positive().max(2000).optional(),
+	waterGrams: z.number().positive().max(5000).optional(),
+	waterTempF: z.number().min(32).max(220).optional(),
+	brewTimeSeconds: z.number().int().positive().max(86_400).optional(),
+	roastDate: z.iso.date().optional(),
+	brewDate: z.iso.date().optional(),
+	location: z.enum(['home', 'out']).optional(),
+	locationName: z.string().trim().min(1).max(200).optional(),
+	locationAddress: z.string().trim().min(1).max(300).optional(),
+	locationLat: z.number().min(-90).max(90).optional(),
+	locationLng: z.number().min(-180).max(180).optional()
+})
+
+/** Shared by pours and saved defaults so both reject the same impossible recipe. */
+function waterCoversCoffee(recipe: { coffeeGrams?: number; waterGrams?: number }): boolean {
+	return (
+		recipe.coffeeGrams === undefined ||
+		recipe.waterGrams === undefined ||
+		recipe.waterGrams >= recipe.coffeeGrams
 	)
+}
+const waterCoversCoffeeIssue = {
+	message: 'Water weight must be at least the coffee weight',
+	path: ['waterGrams']
+}
+
+interface GrindRecipe {
+	grinder?: GrinderId
+	grindSetting?: string
+	grindSize?: GrindSize
+}
+
+/** A setting only means something on a known grinder's dial, and must be a position on it. */
+function checkGrindSetting(recipe: GrindRecipe, ctx: z.RefinementCtx): void {
+	if (recipe.grindSetting === undefined) return
+	if (!recipe.grinder) {
+		ctx.addIssue({
+			code: 'custom',
+			message: 'Pick the grinder this setting is for',
+			path: ['grinder']
+		})
+		return
+	}
+	if (!dialPosition(recipe.grinder, recipe.grindSetting)) {
+		ctx.addIssue({
+			code: 'custom',
+			message: `${grinderName(recipe.grinder)} has no setting "${recipe.grindSetting}"`,
+			path: ['grindSetting']
+		})
+	}
+}
+
+/** With a grinder the band always comes from its setting, never from input, so the dashboard's
+ *  fine → coarse axis can't disagree with the dial. */
+function withGrindBand<T extends GrindRecipe>(recipe: T): T {
+	if (!recipe.grinder) return recipe
+	const grindSize =
+		recipe.grindSetting === undefined ? undefined : grindBand(recipe.grinder, recipe.grindSetting)
+	return { ...recipe, grindSize }
+}
+
+export const tastingDetailsSchema = tastingDetailsObject
+	.refine(waterCoversCoffee, waterCoversCoffeeIssue)
 	.refine(
 		(details) =>
 			details.roastDate === undefined ||
@@ -75,6 +127,32 @@ export const tastingDetailsSchema = z
 			details.brewDate >= details.roastDate,
 		{ message: 'Brew date cannot be before the roast date', path: ['brewDate'] }
 	)
+	.superRefine(checkGrindSetting)
+	.transform(withGrindBand)
+
+/**
+ * The brew setup a user saves on their profile and can apply to the pour form with one click.
+ * Only equipment and recipe fields: the coffee itself changes with every bag, and defaulting
+ * ratings would bias the scores the dashboard ranks by. Validated with the same rules as a
+ * pour's details.
+ */
+export const pourDefaultsSchema = tastingDetailsObject
+	.pick({
+		brewMethod: true,
+		grinder: true,
+		grindSetting: true,
+		grindSize: true,
+		coffeeGrams: true,
+		waterGrams: true,
+		waterTempF: true,
+		brewTimeSeconds: true,
+		location: true
+	})
+	.refine(waterCoversCoffee, waterCoversCoffeeIssue)
+	.superRefine(checkGrindSetting)
+	.transform(withGrindBand)
+
+export type PourDefaults = z.infer<typeof pourDefaultsSchema>
 
 export interface TastingNotes {
 	/** 1–10. The taster's direct, holistic judgment — distinct from

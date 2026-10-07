@@ -17,6 +17,7 @@ export type DeployEnvironment = (typeof deployEnvironments)[number]
  */
 export const data = {
 	tableName: 'pour-decisions-tastings',
+	settingsTableName: 'pour-decisions-user-settings',
 	userPoolId: 'us-west-1_CfmKBSS3p',
 	userPoolClientId: '662qvpjlv07qrt7qraiuj13gdd',
 	cognitoDomain: 'us-west-1cfmkbss3p.auth.us-west-1.amazoncognito.com'
