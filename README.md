@@ -58,7 +58,7 @@ aws cognito-idp admin-set-user-password \
 
 - `src/service-worker.ts` (SvelteKit-built, production only) precaches the hashed build and `static/` per deploy and serves them cache-first. Pages, load data (`__data.json`) and `/api/*` always go to the network — they are per-user — and offline navigations fall back to `static/offline.html`.
 - A new deploy's worker waits instead of taking over; `src/routes/+layout.svelte` shows an "Update available" prompt that activates it and reloads.
-- Icons in `static/` (`icon-*.png`, `apple-touch-icon.png`) are rendered from `src/lib/assets/favicon.svg`; keep `theme_color` in `static/manifest.webmanifest` and `src/app.html` in sync.
+- Icons (`static/icon-*.png`, `static/apple-touch-icon.png`, `src/lib/assets/favicon.png`) are rendered from `src/lib/assets/cup-stack.png` on the app background (`#f8f2e8`); keep `theme_color` in `static/manifest.webmanifest` and `src/app.html` in sync.
 
 ## Infrastructure
 

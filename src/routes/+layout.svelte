@@ -2,7 +2,7 @@
 import type { Snippet } from 'svelte'
 import '../app.css'
 import { onMount } from 'svelte'
-import favicon from '$lib/assets/favicon.svg'
+import favicon from '$lib/assets/favicon.png'
 import { initAmplify } from '$lib/auth/amplifyClient'
 
 let { children }: { children: Snippet } = $props()
@@ -48,7 +48,7 @@ function reloadForUpdate() {
 </script>
 
 <svelte:head>
-	<link rel="icon" href={favicon} />
+	<link rel="icon" type="image/png" href={favicon} />
 </svelte:head>
 
 {@render children()}
