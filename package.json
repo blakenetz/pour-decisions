@@ -2,7 +2,7 @@
 	"name": "pour-decisions",
 	"description": "A palate analytics app for tracking and understanding taste preferences, starting with coffee.",
 	"private": true,
-	"version": "0.1.2",
+	"version": "0.2.0",
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev",
