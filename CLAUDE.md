@@ -93,13 +93,15 @@ questions ("light or dark for Ethiopia?") are answerable. `grindSize` is ordinal
 
 ### Grinders
 
-Grinder dials aren't comparable (Encore 1–40, Ode 1–11, clicks from zero on hand grinders), so a
-pour records the catalog `grinder` (`src/lib/types/grinders.ts`) plus its exact `grindSetting`,
-and `grindSize` is **always derived** from them via that grinder's `bandUpperBounds` — never
-accepted from input when a grinder is set. That keeps every grinder on the shared fine → coarse
-axis the dashboard groups and ranks by. Without a grinder the taster picks `grindSize` directly.
-Adding a grinder is one catalog entry; derive its band bounds from a published setting → micron
-model, not by eye.
+Grinder dials aren't comparable (Encore 0–40, Ode 1–11 with marks, clicks from zero on hand
+grinders), so a pour records the catalog `grinder` (`src/lib/types/grinders.ts`) plus its exact
+`grindSetting` (the dial label as a string, e.g. "4.2"), and `grindSize` is **always derived**
+from them — never accepted from input when a grinder is set. Each grinder maps dial position →
+approximate microns, and microns → band uses Honest Coffee Guide's 200 µm bands, which keeps
+every grinder on the shared fine → coarse axis the dashboard groups and ranks by. Without a
+grinder the taster picks `grindSize` directly. Add grinders from Honest Coffee Guide's
+per-grinder chart (dial range + micron range), not by eye; compound dials (1Zpresso, Eureka,
+Vario) need a different setting input first.
 
 Flavor tags are normalized (`normalizeNote`) at write time so casing never splits a group.
 

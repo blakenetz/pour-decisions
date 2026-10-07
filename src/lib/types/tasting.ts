@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { BREW_METHODS, COUNTRIES, GRIND_SIZES, type GrindSize, PROCESSES } from './coffee'
-import { GRINDER_IDS, GRINDERS, type GrinderId, grindBand } from './grinders'
+import { dialPosition, GRINDER_IDS, GRINDERS, type GrinderId, grindBand } from './grinders'
 
 export type BeverageType = 'coffee'
 
@@ -28,8 +28,8 @@ export interface TastingDetails {
 	grindSize?: string
 	/** Catalog grinder ({@link GRINDERS}) the coffee was ground on. */
 	grinder?: string
-	/** The exact dial setting on {@link grinder}, in that grinder's own units. */
-	grindSetting?: number
+	/** The exact dial setting on {@link grinder} as written for that dial, e.g. "14" or "4.2". */
+	grindSetting?: string
 	coffeeGrams?: number
 	waterGrams?: number
 	waterTempF?: number
@@ -56,7 +56,7 @@ const tastingDetailsObject = z.object({
 	brewMethod: z.enum(BREW_METHODS).optional(),
 	grindSize: z.enum(GRIND_SIZES).optional(),
 	grinder: z.enum(GRINDER_IDS).optional(),
-	grindSetting: z.number().optional(),
+	grindSetting: z.string().trim().min(1).max(20).optional(),
 	coffeeGrams: z.number().positive().max(2000).optional(),
 	waterGrams: z.number().positive().max(5000).optional(),
 	waterTempF: z.number().min(32).max(220).optional(),
@@ -85,7 +85,7 @@ const waterCoversCoffeeIssue = {
 
 interface GrindRecipe {
 	grinder?: GrinderId
-	grindSetting?: number
+	grindSetting?: string
 	grindSize?: GrindSize
 }
 
@@ -100,16 +100,10 @@ function checkGrindSetting(recipe: GrindRecipe, ctx: z.RefinementCtx): void {
 		})
 		return
 	}
-	const { name, min, max, step } = GRINDERS[recipe.grinder]
-	const steps = (recipe.grindSetting - min) / step
-	if (
-		recipe.grindSetting < min ||
-		recipe.grindSetting > max ||
-		Math.abs(steps - Math.round(steps)) > 1e-9
-	) {
+	if (!dialPosition(recipe.grinder, recipe.grindSetting)) {
 		ctx.addIssue({
 			code: 'custom',
-			message: `${name} settings run ${min}–${max} in steps of ${step}`,
+			message: `${GRINDERS[recipe.grinder].name} has no setting "${recipe.grindSetting}"`,
 			path: ['grindSetting']
 		})
 	}

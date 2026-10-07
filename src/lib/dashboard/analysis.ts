@@ -1,5 +1,5 @@
 import { grindRank, ROAST_BANDS, roastBand } from '../types/coffee'
-import { GRINDERS, type GrinderId } from '../types/grinders'
+import { formatGrindSetting, GRINDERS, type GrinderId } from '../types/grinders'
 import { pourDate, type TastingEntry } from '../types/tasting'
 
 /**
@@ -23,7 +23,7 @@ export interface PourFact {
 	grindSize: string | null
 	/** Position of `grindSize` on the fine → coarse axis; `null` when unrecorded. */
 	grindRank: number | null
-	/** Exact dial reading when a catalog grinder was used, e.g. "Encore 14". */
+	/** Exact dial reading when a catalog grinder was used, e.g. "Encore 14" or "C40 24 clicks". */
 	grindSetting: string | null
 	roastLevel: number | null
 	roastBand: string | null
@@ -78,7 +78,7 @@ export function toPourFact(entry: TastingEntry): PourFact {
 		grindRank: grindRank(details?.grindSize),
 		grindSetting:
 			details?.grinder && details.grinder in GRINDERS && details.grindSetting !== undefined
-				? `${GRINDERS[details.grinder as GrinderId].shortName} ${details.grindSetting}`
+				? formatGrindSetting(details.grinder as GrinderId, details.grindSetting)
 				: null,
 		roastLevel: details?.roastLevel ?? null,
 		roastBand: details?.roastLevel !== undefined ? roastBand(details.roastLevel) : null,

@@ -38,7 +38,7 @@ export const actions: Actions = {
 			brewMethod: str(data, 'brewMethod'),
 			grindSize: str(data, 'grindSize'),
 			grinder: str(data, 'grinder'),
-			grindSetting: num(data, 'grindSetting'),
+			grindSetting: str(data, 'grindSetting'),
 			coffeeGrams: num(data, 'coffeeGrams'),
 			waterGrams: num(data, 'waterGrams'),
 			waterTempF: num(data, 'waterTempF'),

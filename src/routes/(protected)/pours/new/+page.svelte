@@ -43,7 +43,7 @@ let clientError = $state('')
 
 // Brew setup fields are bound so "Use my brew defaults" can fill them.
 let grinder: GrinderId | '' = $state('')
-let grindSetting: number | null = $state(null)
+let grindSetting = $state('')
 let grindSize = $state('')
 let coffeeGrams: number | null = $state(null)
 let waterGrams: number | null = $state(null)
@@ -59,7 +59,7 @@ function applyDefaults() {
 	if (defaults.location) location = defaults.location
 	if (defaults.grinder) {
 		grinder = defaults.grinder
-		grindSetting = defaults.grindSetting ?? null
+		grindSetting = defaults.grindSetting ?? ''
 	}
 	if (defaults.grindSize && !defaults.grinder) grindSize = defaults.grindSize
 	if (defaults.coffeeGrams !== undefined) coffeeGrams = defaults.coffeeGrams

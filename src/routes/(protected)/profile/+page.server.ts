@@ -37,7 +37,7 @@ export const actions: Actions = {
 			brewMethod: formString(data, 'brewMethod'),
 			grindSize: formString(data, 'grindSize'),
 			grinder: formString(data, 'grinder'),
-			grindSetting: formNumber(data, 'grindSetting'),
+			grindSetting: formString(data, 'grindSetting'),
 			coffeeGrams: formNumber(data, 'coffeeGrams'),
 			waterGrams: formNumber(data, 'waterGrams'),
 			waterTempF: formNumber(data, 'waterTempF'),

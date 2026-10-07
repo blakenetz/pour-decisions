@@ -16,7 +16,7 @@ let saving = $state(false)
 // Seeded once from the saved defaults; after that the inputs are the source of truth.
 const saved = untrack(() => data.defaults)
 let grinder: GrinderId | '' = $state(saved.grinder ?? '')
-let grindSetting: number | null = $state(saved.grindSetting ?? null)
+let grindSetting = $state(saved.grindSetting ?? '')
 let grindSize = $state(saved.grinder ? '' : (saved.grindSize ?? ''))
 
 const inputClass =

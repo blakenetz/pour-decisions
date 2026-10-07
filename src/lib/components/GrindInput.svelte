@@ -5,14 +5,15 @@ import { GRINDERS, type GrinderId, grindBand } from '$lib/types/grinders'
 let {
 	grinder = $bindable(''),
 	grindSize = $bindable(''),
-	grindSetting = $bindable(null),
+	grindSetting = $bindable(''),
 	sizePlaceholder,
 	inputClass,
 	labelClass
 }: {
 	grinder?: GrinderId | ''
 	grindSize?: string
-	grindSetting?: number | null
+	/** The dial label, e.g. "14" or "4.2"; blank when unset. */
+	grindSetting?: string
 	/** Blank option of the descriptive size list, e.g. "Select a size" or "No default". */
 	sizePlaceholder: string
 	inputClass: string
@@ -20,22 +21,24 @@ let {
 } = $props()
 
 const selected = $derived(grinder ? GRINDERS[grinder] : undefined)
-// Shown next to the setting so the shared band it's filed under (the dashboard's axis) is visible.
-const band = $derived(
-	grinder &&
-		selected &&
-		grindSetting !== null &&
-		grindSetting >= selected.min &&
-		grindSetting <= selected.max
-		? grindBand(grinder, grindSetting)
-		: null
+const range = $derived(
+	selected ? `${selected.positions[0].label}–${selected.positions.at(-1)?.label}` : ''
 )
+// Shown next to the setting so the shared band it's filed under (the dashboard's axis) is visible.
+const band = $derived(grinder && grindSetting ? grindBand(grinder, grindSetting) : undefined)
 </script>
 
 <div class="grid grid-cols-2 gap-6">
 	<div class="flex flex-col gap-1">
 		<label for="grinder" class={labelClass}>Grinder</label>
-		<select id="grinder" name="grinder" class={inputClass} bind:value={grinder}>
+		<!-- A setting from one grinder's dial means nothing on another's. -->
+		<select
+			id="grinder"
+			name="grinder"
+			class={inputClass}
+			bind:value={grinder}
+			onchange={() => (grindSetting = '')}
+		>
 			<option value="">No specific grinder</option>
 			{#each Object.entries(GRINDERS) as [id, { name }] (id)}
 				<option value={id}>{name}</option>
@@ -45,17 +48,13 @@ const band = $derived(
 
 	{#if selected}
 		<div class="flex flex-col gap-1">
-			<label for="grindSetting" class={labelClass}>Setting ({selected.min}–{selected.max})</label>
-			<input
-				id="grindSetting"
-				name="grindSetting"
-				type="number"
-				min={selected.min}
-				max={selected.max}
-				step={selected.step}
-				bind:value={grindSetting}
-				class={inputClass}
-			/>
+			<label for="grindSetting" class={labelClass}>{selected.unit} ({range})</label>
+			<select id="grindSetting" name="grindSetting" class={inputClass} bind:value={grindSetting}>
+				<option value="">Select a setting</option>
+				{#each selected.positions as { label } (label)}
+					<option value={label}>{label}</option>
+				{/each}
+			</select>
 			{#if band}
 				<span class="text-[10px] text-gray-400 uppercase tracking-widest">≈ {band}</span>
 			{/if}

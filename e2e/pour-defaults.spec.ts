@@ -73,8 +73,8 @@ test('a grinder replaces grind size with its own dial, filed under a shared band
 	await open(page, '/profile')
 	await page.locator('#grinder').selectOption('baratza-encore')
 	await expect(page.locator('#grindSize')).toHaveCount(0)
-	await expect(page.getByLabel('Setting (1–40)')).toBeVisible()
-	await page.locator('#grindSetting').fill('14')
+	await expect(page.getByLabel('Setting (0–40)')).toBeVisible()
+	await page.locator('#grindSetting').selectOption('14')
 	await expect(page.getByText('≈ Medium-Fine')).toBeVisible()
 	await saveDefaults(page)
 
@@ -82,8 +82,14 @@ test('a grinder replaces grind size with its own dial, filed under a shared band
 	await page.getByRole('button', { name: 'Use my brew defaults' }).click()
 	await expect(page.locator('#grinder')).toHaveValue('baratza-encore')
 	await expect(page.locator('#grindSetting')).toHaveValue('14')
-	await page.locator('#grindSetting').fill('28')
+	await page.locator('#grindSetting').selectOption('32')
 	await expect(page.getByText('≈ Coarse')).toBeVisible()
+
+	// Another grinder's dial replaces the setting list, and the old setting doesn't carry over.
+	await page.locator('#grinder').selectOption('fellow-ode-gen-2')
+	await expect(page.locator('#grindSetting')).toHaveValue('')
+	await page.locator('#grindSetting').selectOption('4.2')
+	await expect(page.getByText('≈ Medium-Fine')).toBeVisible()
 
 	// Back to no specific grinder: the descriptive sizes return, and the defaults are cleared.
 	await open(page, '/profile')
