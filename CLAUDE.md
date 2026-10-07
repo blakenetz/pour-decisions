@@ -31,6 +31,16 @@ A palate analytics app that helps users track and understand their taste prefere
   visible in `git log`. Body explains *why*, not a line-by-line diff narration.
 - Never commit `.env*` (already gitignored) or leave the tree dirty at a stopping point.
 
+### Branching
+
+- Start every new piece of work on a fresh branch from the latest `main`:
+  `git fetch origin && git switch -c <type>/<short-slug> origin/main` (e.g. `fix/brand-icons`,
+  `feat/export-csv`; `<type>` matches the commit types below).
+- One branch per PR / release. Never commit directly to `main`, and don't stack new work on
+  `dev` or on another open PR's branch unless explicitly asked.
+- If the working tree has uncommitted changes or a running dev server is using it, create the
+  branch in a separate `git worktree` instead of switching branches under it.
+
 ### Versioning
 
 Every PR is a release and bumps `version` in the root `package.json` exactly once (not
@@ -39,6 +49,8 @@ Every PR is a release and bumps `version` in the root `package.json` exactly onc
 - Bump relative to the version on `main`, not per commit: a PR with several commits still gets
   one bump. If the branch already bumped past `main`, don't bump again; only raise it to a higher
   level if new commits need one (e.g. patch → minor).
+- If `main` moves while the PR is open (another release merged), rebase onto `origin/main` and
+  re-bump relative to the new `main` version, updating the PR title to match.
 - Pick the level from the PR's highest-impact change (pre-1.0 semver: anything breaking goes
   in the minor slot, never the major):
   - **minor** (`0.Y.0`): any `feat:`, or any breaking change (removed/renamed env vars, schema
