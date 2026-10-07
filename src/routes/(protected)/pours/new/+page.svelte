@@ -1,21 +1,32 @@
 <script lang="ts">
+import { untrack } from 'svelte'
 import { enhance } from '$app/forms'
+import { resolve } from '$app/paths'
 import { Flowers, RatingRow } from '$lib'
 import AppHeader from '$lib/components/AppHeader.svelte'
+import BrewTimeInput from '$lib/components/BrewTimeInput.svelte'
 import CafeLocationInput from '$lib/components/CafeLocationInput.svelte'
 import { BREW_METHODS, COUNTRIES, GRIND_SIZES, PROCESSES } from '$lib/types/coffee'
-import type { ActionData } from './$types'
+import type { ActionData, PageData } from './$types'
 
-let { form }: { form: ActionData } = $props()
+let { data, form }: { data: PageData; form: ActionData } = $props()
+
+// The user's saved brew setup (Profile) seeds the form once; edits here don't touch it.
+const defaults = untrack(() => data.defaults)
+// Brew method sits in the always-visible essentials; everything else pre-filled is inside the
+// collapsed details, so say so rather than submit values the taster never saw.
+const hasHiddenDefaults = Object.entries(defaults).some(
+	([field, value]) => field !== 'brewMethod' && value !== undefined
+)
 
 // Required up-front fields are bound so we can validate before submitting.
 let productName = $state('')
 let roaster = $state('')
-let brewMethod = $state('')
+let brewMethod = $state(defaults.brewMethod ?? '')
 let overallRating = $state(0)
 
 let roastLevel = $state(0)
-let location: 'home' | 'out' = $state('home')
+let location: 'home' | 'out' = $state(defaults.location ?? 'home')
 let aromaIntensity = $state(0)
 let aromaClarity = $state(0)
 let flavorComplexity = $state(0)
@@ -27,15 +38,9 @@ let bodyTactile = $state(0)
 let finishFlavor = $state(0)
 let finishLength = $state(0)
 let brewDate = $state(new Date().toISOString().slice(0, 10))
-let brewMinutes = $state('')
-let brewSeconds = $state('')
 let wouldBuyAgain: 'yes' | 'no' | '' = $state('')
 let submitting = $state(false)
 let clientError = $state('')
-
-// Posted as a single seconds value so the schema stores one comparable number
-// rather than two fields every consumer has to recombine.
-const brewTimeSeconds = $derived((Number(brewMinutes) || 0) * 60 + (Number(brewSeconds) || 0) || '')
 
 const listFormatter = new Intl.ListFormat('en', { style: 'long', type: 'conjunction' })
 
@@ -187,7 +192,12 @@ const toggleClass = 'px-4 py-2 border text-sm transition-colors rounded-full bor
 				class="flex cursor-pointer select-none items-center gap-2 text-sm font-semibold uppercase tracking-widest text-gray-500 list-none [&::-webkit-details-marker]:hidden"
 			>
 				<span class="text-lg leading-none transition-transform group-open:rotate-45">+</span>
-				<span class="group-open:hidden">Add tasting details</span>
+				<span class="group-open:hidden">
+					Add tasting details{#if hasHiddenDefaults}<span
+							class="ml-2 normal-case tracking-normal font-normal text-gray-400"
+							>brew setup pre-filled</span
+						>{/if}
+				</span>
 				<span class="hidden group-open:inline">Tasting details</span>
 			</summary>
 
@@ -250,11 +260,21 @@ const toggleClass = 'px-4 py-2 border text-sm transition-colors rounded-full bor
 
 				<div class="flex flex-col gap-6">
 					<h3 class={sectionHeadingClass}>Brew</h3>
+					{#if hasHiddenDefaults}
+						<p class="text-[10px] text-gray-400 -mt-4">
+							Pre-filled from your <a href={resolve('/profile')} class="underline">profile defaults</a>.
+						</p>
+					{/if}
 
 					<div class="flex flex-col gap-1">
 						<label for="grindSize" class={labelClass}>Grind Size</label>
-						<select id="grindSize" name="grindSize" class={inputClass}>
-							<option value="" disabled selected>Select a size</option>
+						<select
+							id="grindSize"
+							name="grindSize"
+							class={inputClass}
+							value={defaults.grindSize ?? ''}
+						>
+							<option value="" disabled>Select a size</option>
 							{#each GRIND_SIZES as size (size)}
 								<option value={size}>{size}</option>
 							{/each}
@@ -264,45 +284,48 @@ const toggleClass = 'px-4 py-2 border text-sm transition-colors rounded-full bor
 					<div class="grid grid-cols-3 gap-6">
 						<div class="flex flex-col gap-1">
 							<label for="coffeeGrams" class={labelClass}>Coffee (g)</label>
-							<input id="coffeeGrams" name="coffeeGrams" type="number" min="0" class={inputClass} />
+							<input
+								id="coffeeGrams"
+								name="coffeeGrams"
+								type="number"
+								min="0"
+								value={defaults.coffeeGrams ?? ''}
+								class={inputClass}
+							/>
 						</div>
 
 						<div class="flex flex-col gap-1">
 							<label for="waterGrams" class={labelClass}>Water (g)</label>
-							<input id="waterGrams" name="waterGrams" type="number" min="0" class={inputClass} />
+							<input
+								id="waterGrams"
+								name="waterGrams"
+								type="number"
+								min="0"
+								value={defaults.waterGrams ?? ''}
+								class={inputClass}
+							/>
 						</div>
 
 						<div class="flex flex-col gap-1">
 							<label for="waterTempF" class={labelClass}>Water Temp (°F)</label>
-							<input id="waterTempF" name="waterTempF" type="number" min="0" class={inputClass} />
+							<input
+								id="waterTempF"
+								name="waterTempF"
+								type="number"
+								min="0"
+								value={defaults.waterTempF ?? ''}
+								class={inputClass}
+							/>
 						</div>
 					</div>
 
 					<div class="flex flex-col gap-1">
 						<span class={labelClass}>Brew Time</span>
-						<input type="hidden" name="brewTimeSeconds" value={brewTimeSeconds} />
-						<div class="flex items-baseline gap-2">
-							<input
-								aria-label="Brew time minutes"
-								bind:value={brewMinutes}
-								type="number"
-								min="0"
-								max="120"
-								placeholder="3"
-								class="{inputClass} w-16 text-right"
-							/>
-							<span class="text-sm text-gray-500">min</span>
-							<input
-								aria-label="Brew time seconds"
-								bind:value={brewSeconds}
-								type="number"
-								min="0"
-								max="59"
-								placeholder="30"
-								class="{inputClass} w-16 text-right"
-							/>
-							<span class="text-sm text-gray-500">sec</span>
-						</div>
+						<BrewTimeInput
+							name="brewTimeSeconds"
+							initialSeconds={defaults.brewTimeSeconds}
+							{inputClass}
+						/>
 					</div>
 
 					<div class="grid grid-cols-2 gap-6">

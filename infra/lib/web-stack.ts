@@ -45,6 +45,7 @@ export interface WebStackProps extends StackProps {
 	/** Runtime environment for the SvelteKit server ($env/dynamic/*). */
 	readonly appEnv: Record<string, string>
 	readonly tableName: string
+	readonly settingsTableName: string
 	readonly userPoolId: string
 }
 
@@ -124,6 +125,9 @@ export class WebStack extends Stack {
 		server.node.addDependency(immutableUpload)
 
 		Table.fromTableName(this, 'TastingsTable', props.tableName).grantReadWriteData(server)
+		Table.fromTableName(this, 'UserSettingsTable', props.settingsTableName).grantReadWriteData(
+			server
+		)
 		server.addToRolePolicy(
 			new PolicyStatement({
 				// GitHub sign-in (src/routes/api/auth/github/callback) provisions Cognito users itself.

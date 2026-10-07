@@ -2,6 +2,8 @@ import { PutCommand } from '@aws-sdk/lib-dynamodb'
 import { fail, redirect } from '@sveltejs/kit'
 import { ulid } from 'ulid'
 import { db, getTableName } from '$lib/server/db'
+import { formNumber as num, formString as str } from '$lib/server/form-data'
+import { getPourDefaults } from '$lib/server/settings'
 import { parseNotes } from '$lib/types/coffee'
 import {
 	computeIntensityScore,
@@ -11,14 +13,12 @@ import {
 	type TastingEntry,
 	type TastingNotes
 } from '$lib/types/tasting'
-import type { Actions } from './$types'
+import type { Actions, PageServerLoad } from './$types'
 
-function str(data: FormData, key: string): string | undefined {
-	return data.get(key)?.toString().trim() || undefined
-}
-
-function num(data: FormData, key: string): number | undefined {
-	return Number(data.get(key)) || undefined
+export const load: PageServerLoad = async ({ locals }) => {
+	// Loads run in parallel with the (protected) layout's redirect, so guard here too.
+	if (!locals.user) redirect(302, '/')
+	return { defaults: await getPourDefaults(locals.user.userId) }
 }
 
 export const actions: Actions = {

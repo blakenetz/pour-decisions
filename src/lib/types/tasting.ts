@@ -38,36 +38,44 @@ export interface TastingDetails {
 	locationLng?: number
 }
 
-export const tastingDetailsSchema = z
-	.object({
-		roaster: z.string().trim().min(1).max(200).optional(),
-		productName: z.string().trim().min(1).max(200).optional(),
-		country: z.enum(COUNTRIES).optional(),
-		region: z.string().trim().min(1).max(200).optional(),
-		process: z.enum(PROCESSES).optional(),
-		roastLevel: z.number().int().min(1).max(10).optional(),
-		roasterNotes: z.array(z.string().trim().min(1).max(60)).max(20).optional(),
-		brewMethod: z.enum(BREW_METHODS).optional(),
-		grindSize: z.enum(GRIND_SIZES).optional(),
-		coffeeGrams: z.number().positive().max(2000).optional(),
-		waterGrams: z.number().positive().max(5000).optional(),
-		waterTempF: z.number().min(32).max(220).optional(),
-		brewTimeSeconds: z.number().int().positive().max(86_400).optional(),
-		roastDate: z.iso.date().optional(),
-		brewDate: z.iso.date().optional(),
-		location: z.enum(['home', 'out']).optional(),
-		locationName: z.string().trim().min(1).max(200).optional(),
-		locationAddress: z.string().trim().min(1).max(300).optional(),
-		locationLat: z.number().min(-90).max(90).optional(),
-		locationLng: z.number().min(-180).max(180).optional()
-	})
-	.refine(
-		(details) =>
-			details.coffeeGrams === undefined ||
-			details.waterGrams === undefined ||
-			details.waterGrams >= details.coffeeGrams,
-		{ message: 'Water weight must be at least the coffee weight', path: ['waterGrams'] }
+const tastingDetailsObject = z.object({
+	roaster: z.string().trim().min(1).max(200).optional(),
+	productName: z.string().trim().min(1).max(200).optional(),
+	country: z.enum(COUNTRIES).optional(),
+	region: z.string().trim().min(1).max(200).optional(),
+	process: z.enum(PROCESSES).optional(),
+	roastLevel: z.number().int().min(1).max(10).optional(),
+	roasterNotes: z.array(z.string().trim().min(1).max(60)).max(20).optional(),
+	brewMethod: z.enum(BREW_METHODS).optional(),
+	grindSize: z.enum(GRIND_SIZES).optional(),
+	coffeeGrams: z.number().positive().max(2000).optional(),
+	waterGrams: z.number().positive().max(5000).optional(),
+	waterTempF: z.number().min(32).max(220).optional(),
+	brewTimeSeconds: z.number().int().positive().max(86_400).optional(),
+	roastDate: z.iso.date().optional(),
+	brewDate: z.iso.date().optional(),
+	location: z.enum(['home', 'out']).optional(),
+	locationName: z.string().trim().min(1).max(200).optional(),
+	locationAddress: z.string().trim().min(1).max(300).optional(),
+	locationLat: z.number().min(-90).max(90).optional(),
+	locationLng: z.number().min(-180).max(180).optional()
+})
+
+/** Shared by pours and saved defaults so both reject the same impossible recipe. */
+function waterCoversCoffee(recipe: { coffeeGrams?: number; waterGrams?: number }): boolean {
+	return (
+		recipe.coffeeGrams === undefined ||
+		recipe.waterGrams === undefined ||
+		recipe.waterGrams >= recipe.coffeeGrams
 	)
+}
+const waterCoversCoffeeIssue = {
+	message: 'Water weight must be at least the coffee weight',
+	path: ['waterGrams']
+}
+
+export const tastingDetailsSchema = tastingDetailsObject
+	.refine(waterCoversCoffee, waterCoversCoffeeIssue)
 	.refine(
 		(details) =>
 			details.roastDate === undefined ||
@@ -75,6 +83,25 @@ export const tastingDetailsSchema = z
 			details.brewDate >= details.roastDate,
 		{ message: 'Brew date cannot be before the roast date', path: ['brewDate'] }
 	)
+
+/**
+ * The brew setup a user saves on their profile to pre-fill the pour form. Only equipment and
+ * recipe fields: the coffee itself changes with every bag, and defaulting ratings would bias
+ * the scores the dashboard ranks by. Validated with the same rules as a pour's details.
+ */
+export const pourDefaultsSchema = tastingDetailsObject
+	.pick({
+		brewMethod: true,
+		grindSize: true,
+		coffeeGrams: true,
+		waterGrams: true,
+		waterTempF: true,
+		brewTimeSeconds: true,
+		location: true
+	})
+	.refine(waterCoversCoffee, waterCoversCoffeeIssue)
+
+export type PourDefaults = z.infer<typeof pourDefaultsSchema>
 
 export interface TastingNotes {
 	/** 1–10. The taster's direct, holistic judgment — distinct from

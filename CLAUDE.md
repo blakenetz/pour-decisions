@@ -10,6 +10,11 @@ A palate analytics app that helps users track and understand their taste prefere
 ## Core Features
 
 - **Tasting form:** A multi-field input form for logging coffee tastings (roaster, origin country + region, process, brew method, grind size, brew time, roast level, the ten 1–5 sub-ratings, taster's own flavor tags, would-buy-again, free-text notes).
+- **Pour defaults (`/profile`):** The user's usual brew setup (`pourDefaultsSchema`: brew method, grind,
+  dose, water, temp, brew time, location), stored one item per user in the separate
+  `DYNAMODB_SETTINGS_TABLE` so tastings queries stay "every row is a pour". Defaults only pre-fill
+  visible form inputs — never apply them server-side to blank fields, and never default ratings or
+  the coffee itself.
 - **Dashboard (`/dashboard`):** Authenticated landing page built around drill-down. A flat fact table (one row per pour) is sent to the client and every chart, filter and finding derives from it, so slicing never costs a round trip. See "Tasting data model" below.
 - **Auth:** Email/password and social sign-in (Google, GitHub, Apple) via AWS Amplify/Cognito.
 
