@@ -30,6 +30,8 @@ export interface PourDecisionsStackProps extends StackProps {
 	readonly googleClientSecret: string
 	/** OAuth client secret for the "GitHub" Cognito OIDC identity provider. Never hardcode this value. */
 	readonly githubClientSecret: string
+	/** Origins the app is served from; each gets a Cognito OAuth callback and logout URL. */
+	readonly appOrigins: readonly string[]
 }
 
 /**
@@ -140,8 +142,8 @@ export class PourDecisionsStack extends Stack {
 			oAuth: {
 				flows: { authorizationCodeGrant: true }, // AllowedOAuthFlows: [code]
 				scopes: [OAuthScope.EMAIL, OAuthScope.OPENID, OAuthScope.PROFILE], // AllowedOAuthScopes
-				callbackUrls: ['http://localhost:8008/auth/callback'], // CallbackURLs (PUBLIC_OAUTH_REDIRECT_SIGNIN)
-				logoutUrls: ['http://localhost:8008/'] // LogoutURLs (PUBLIC_OAUTH_REDIRECT_SIGNOUT)
+				callbackUrls: props.appOrigins.map((origin) => `${origin}/auth/callback`), // CallbackURLs (src/lib/auth/amplifyClient.ts redirectSignIn)
+				logoutUrls: props.appOrigins.map((origin) => `${origin}/`) // LogoutURLs (amplifyClient.ts redirectSignOut)
 			},
 			supportedIdentityProviders: [
 				UserPoolClientIdentityProvider.COGNITO,

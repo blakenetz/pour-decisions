@@ -8,7 +8,9 @@
 		"synth": "cdk synth",
 		"diff": "cdk diff",
 		"deploy": "cdk deploy",
-		"import": "cdk import"
+		"import": "cdk import",
+		"web:diff": "cdk --app 'npx tsx bin/web.ts' --output cdk.web.out diff",
+		"web:deploy": "cdk --app 'npx tsx bin/web.ts' --output cdk.web.out deploy --require-approval never"
 	},
 	"dependencies": {
 		"aws-cdk-lib": "^2",

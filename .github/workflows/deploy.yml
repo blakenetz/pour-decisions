@@ -1,0 +1,66 @@
+# Pull requests deploy to the single shared `dev` environment (latest push wins); pushes to main
+# deploy `prod`. Each environment is one CDK stack, PourDecisionsWeb-<env> (infra/bin/web.ts).
+name: Deploy
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    # Fork PRs get neither secrets nor an OIDC token for the dev environment, so skip them.
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ github.event_name == 'push' && 'prod' || 'dev' }}
+      url: ${{ steps.deploy.outputs.url }}
+    # One deploy per environment at a time; a newer queued run replaces an older queued one, and an
+    # in-flight CloudFormation update is never cancelled halfway.
+    concurrency:
+      group: deploy-${{ github.event_name == 'push' && 'prod' || 'dev' }}
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write # OIDC token for aws-actions/configure-aws-credentials
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12.4.2
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22 # matches the Lambda runtime in infra/lib/web-stack.ts
+          cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            infra/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      - run: pnpm lint
+      - run: pnpm build
+      - run: pnpm package:lambda
+
+      - run: pnpm install --frozen-lockfile
+        working-directory: infra
+
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: arn:aws:iam::187864192245:role/pour-decisions-github-deploy
+          aws-region: us-west-1
+
+      - id: deploy
+        working-directory: infra
+        env:
+          # Optional per-environment GitHub OAuth app (see infra/bin/web.ts).
+          GH_OAUTH_CLIENT_ID: ${{ secrets.GH_OAUTH_CLIENT_ID }}
+          GH_OAUTH_CLIENT_SECRET: ${{ secrets.GH_OAUTH_CLIENT_SECRET }}
+        run: |
+          pnpm run web:deploy -c env=${{ github.event_name == 'push' && 'prod' || 'dev' }} --outputs-file outputs.json
+          echo "url=$(jq -r '.[].Url' outputs.json)" >> "$GITHUB_OUTPUT"

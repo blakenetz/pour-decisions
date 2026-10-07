@@ -56,8 +56,33 @@ aws cognito-idp admin-set-user-password \
 
 ## Infrastructure
 
-`infra/` is a standalone CDK project (its own `pnpm install`, not a root workspace member) managing the DynamoDB table and Cognito user pool/client/domain/identity providers.
+`infra/` is a standalone CDK project (its own `pnpm install`, not a root workspace member) with two CDK apps:
+
+- `bin/infra.ts` — account-level stacks, deployed by hand with admin credentials (needs the root `.env` secrets):
+  - `PourDecisionsStack` — DynamoDB table and Cognito user pool/client/domain/identity providers.
+  - `PourDecisionsCiStack` — GitHub Actions OIDC provider and the `pour-decisions-github-deploy` role.
+- `bin/web.ts` — one web environment per stack (`PourDecisionsWeb-dev`, `PourDecisionsWeb-prod`): CloudFront → Lambda (adapter-node behind [Lambda Web Adapter](https://github.com/awslabs/aws-lambda-web-adapter), Function URL) for server routes, S3 for `build/client`. Deployed by CI.
+
+Manual workflow for `bin/infra.ts`:
 
 - `cd infra && pnpm install`
 - `pnpm run diff` — preview changes against live AWS state (always run before deploying)
-- `pnpm run deploy` — apply changes
+- `pnpm run deploy <StackName>` — apply changes
+
+## Deployments
+
+`.github/workflows/deploy.yml` deploys via GitHub OIDC (no stored AWS keys):
+
+| Trigger | GitHub environment | Stack |
+| --- | --- | --- |
+| Pull request (same-repo branches only) | `dev` | `PourDecisionsWeb-dev` — one shared slot, latest push wins |
+| Push to `main` | `prod` (only `main` may deploy) | `PourDecisionsWeb-prod` |
+
+Each run type-checks, lints, builds, stages the Lambda package (`pnpm package:lambda`), then `cdk deploy`s. The environment URL (a generated `*.cloudfront.net` domain) shows on the PR / deployment. Both environments currently share the one DynamoDB table and user pool.
+
+Runtime config lives in `infra/bin/web.ts`. OAuth redirect URLs are derived from the request origin, so each environment's origin must be registered in two places:
+
+- **Cognito** — `webOrigins` in `infra/lib/config.ts` feeds the app client's callback/logout URLs; redeploy `PourDecisionsStack` after changing it.
+- **GitHub sign-in** — GitHub OAuth apps allow one callback URL, so each environment needs its own app (callback `https://<origin>/api/auth/github/callback`) with its credentials stored as `GH_OAUTH_CLIENT_ID` / `GH_OAUTH_CLIENT_SECRET` secrets on that GitHub environment. Without them GitHub sign-in is unavailable there; email/password and Google still work.
+
+To deploy a web environment by hand: `pnpm build && pnpm package:lambda`, then `cd infra && pnpm run web:deploy -c env=dev`.
