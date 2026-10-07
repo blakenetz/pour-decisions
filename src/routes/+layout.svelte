@@ -7,23 +7,27 @@ import { initAmplify } from '$lib/auth/amplifyClient'
 
 let { children }: { children: Snippet } = $props()
 
-let updateAvailable = $state(false)
+/** A newly deployed service worker that is installed and waiting for this page to accept it. */
+let waitingWorker = $state.raw<ServiceWorker | null>(null)
 
 onMount(() => {
 	initAmplify()
+	// Registered here rather than by SvelteKit (kit.serviceWorker.register = false) so the "Update
+	// available" prompt can watch for a waiting worker. Dev serves no bundled worker.
 	if ('serviceWorker' in navigator && !import.meta.env.DEV) {
 		navigator.serviceWorker
-			.register('/sw.js')
+			.register('/service-worker.js')
 			.then((reg) => {
-				if (reg.waiting) {
-					updateAvailable = true
+				if (reg.waiting && navigator.serviceWorker.controller) {
+					waitingWorker = reg.waiting
 				}
 				reg.addEventListener('updatefound', () => {
 					const installing = reg.installing
 					if (!installing) return
 					installing.addEventListener('statechange', () => {
+						// With no controller this is the first install, which activates on its own.
 						if (installing.state === 'installed' && navigator.serviceWorker.controller) {
-							updateAvailable = true
+							waitingWorker = installing
 						}
 					})
 				})
@@ -35,13 +39,11 @@ onMount(() => {
 })
 
 function reloadForUpdate() {
-	if (navigator.serviceWorker.controller) {
-		navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' })
-		// after skipWaiting, listen for controllerchange and reload
-		navigator.serviceWorker.addEventListener('controllerchange', () => {
-			window.location.reload()
-		})
-	}
+	navigator.serviceWorker.addEventListener('controllerchange', () => window.location.reload(), {
+		once: true
+	})
+	// Only the waiting worker can skip its own waiting phase (see src/service-worker.ts).
+	waitingWorker?.postMessage({ type: 'SKIP_WAITING' })
 }
 </script>
 
@@ -51,7 +53,7 @@ function reloadForUpdate() {
 
 {@render children()}
 
-{#if updateAvailable}
+{#if waitingWorker}
 	<div
 		class="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-white/90 text-sm px-4 py-2 rounded shadow-lg"
 	>

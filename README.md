@@ -54,6 +54,12 @@ aws cognito-idp admin-set-user-password \
 
 (repeat per account — all three should stay in sync since the suite uses one shared password). The e2e run reseeds each account to its expected tier before every test via `e2e/global-setup.ts`, so pour counts stay deterministic across runs.
 
+## PWA
+
+- `src/service-worker.ts` (SvelteKit-built, production only) precaches the hashed build and `static/` per deploy and serves them cache-first. Pages, load data (`__data.json`) and `/api/*` always go to the network — they are per-user — and offline navigations fall back to `static/offline.html`.
+- A new deploy's worker waits instead of taking over; `src/routes/+layout.svelte` shows an "Update available" prompt that activates it and reloads.
+- Icons in `static/` (`icon-*.png`, `apple-touch-icon.png`) are rendered from `src/lib/assets/favicon.svg`; keep `theme_color` in `static/manifest.webmanifest` and `src/app.html` in sync.
+
 ## Infrastructure
 
 `infra/` is a standalone CDK project (its own `pnpm install`, not a root workspace member) with two CDK apps:

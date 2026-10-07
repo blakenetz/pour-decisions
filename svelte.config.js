@@ -10,7 +10,9 @@ const config = {
 	kit: {
 		// adapter-node's server runs on AWS Lambda behind Lambda Web Adapter (see infra/lib/web-stack.ts).
 		// Static files are served from S3 via CloudFront, which compresses them itself.
-		adapter: adapter({ precompress: false })
+		adapter: adapter({ precompress: false }),
+		// src/routes/+layout.svelte registers the worker itself to drive the update prompt.
+		serviceWorker: { register: false }
 	}
 }
 
