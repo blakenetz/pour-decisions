@@ -1,5 +1,4 @@
 <script lang="ts">
-import { untrack } from 'svelte'
 import { enhance } from '$app/forms'
 import { resolve } from '$app/paths'
 import { Flowers, RatingRow } from '$lib'
@@ -11,22 +10,20 @@ import type { ActionData, PageData } from './$types'
 
 let { data, form }: { data: PageData; form: ActionData } = $props()
 
-// The user's saved brew setup (Profile) seeds the form once; edits here don't touch it.
-const defaults = untrack(() => data.defaults)
-// Brew method sits in the always-visible essentials; everything else pre-filled is inside the
-// collapsed details, so say so rather than submit values the taster never saw.
-const hasHiddenDefaults = Object.entries(defaults).some(
-	([field, value]) => field !== 'brewMethod' && value !== undefined
-)
+// The taster's saved brew setup (Profile). Never applied on load: only "Use my brew defaults"
+// fills it in, so every value on a pour is one the taster chose to put there.
+const defaults = $derived(data.defaults)
+const hasDefaults = $derived(Object.values(defaults).some((value) => value !== undefined))
+let defaultsApplied = $state(false)
 
 // Required up-front fields are bound so we can validate before submitting.
 let productName = $state('')
 let roaster = $state('')
-let brewMethod = $state(defaults.brewMethod ?? '')
+let brewMethod = $state('')
 let overallRating = $state(0)
 
 let roastLevel = $state(0)
-let location: 'home' | 'out' = $state(defaults.location ?? 'home')
+let location: 'home' | 'out' = $state('home')
 let aromaIntensity = $state(0)
 let aromaClarity = $state(0)
 let flavorComplexity = $state(0)
@@ -41,6 +38,33 @@ let brewDate = $state(new Date().toISOString().slice(0, 10))
 let wouldBuyAgain: 'yes' | 'no' | '' = $state('')
 let submitting = $state(false)
 let clientError = $state('')
+
+// Brew setup fields are bound so "Use my brew defaults" can fill them.
+let grindSize = $state('')
+let coffeeGrams: number | null = $state(null)
+let waterGrams: number | null = $state(null)
+let waterTempF: number | null = $state(null)
+let brewTimeSeed: number | undefined = $state(undefined)
+// BrewTimeInput keeps its own min/sec state; bumping this remounts it with the new seed.
+let brewTimeVersion = $state(0)
+let detailsOpen = $state(false)
+
+/** Fills every field that has a saved default (overwriting what's there) and leaves the rest. */
+function applyDefaults() {
+	if (defaults.brewMethod) brewMethod = defaults.brewMethod
+	if (defaults.location) location = defaults.location
+	if (defaults.grindSize) grindSize = defaults.grindSize
+	if (defaults.coffeeGrams !== undefined) coffeeGrams = defaults.coffeeGrams
+	if (defaults.waterGrams !== undefined) waterGrams = defaults.waterGrams
+	if (defaults.waterTempF !== undefined) waterTempF = defaults.waterTempF
+	if (defaults.brewTimeSeconds !== undefined) {
+		brewTimeSeed = defaults.brewTimeSeconds
+		brewTimeVersion += 1
+	}
+	// Most of these fields live in the collapsed details; show what was filled.
+	detailsOpen = true
+	defaultsApplied = true
+}
 
 const listFormatter = new Intl.ListFormat('en', { style: 'long', type: 'conjunction' })
 
@@ -81,6 +105,22 @@ const toggleClass = 'px-4 py-2 border text-sm transition-colors rounded-full bor
 	>
 		<div class="flex flex-col gap-6">
 			<h2 class={sectionHeadingClass}>The Essentials</h2>
+
+			{#if hasDefaults}
+				<div class="flex items-center gap-3">
+					<button type="button" onclick={applyDefaults} class={toggleClass}>
+						Use my brew defaults
+					</button>
+					{#if defaultsApplied}
+						<span class="text-xs text-gray-500">Brew setup filled in below.</span>
+					{/if}
+				</div>
+			{:else}
+				<p class="text-[10px] text-gray-400 -mt-2">
+					Save your usual brew setup on your
+					<a href={resolve('/profile')} class="underline">profile</a> to fill it here in one tap.
+				</p>
+			{/if}
 
 			<div class="flex flex-col gap-3">
 				<RatingRow
@@ -187,17 +227,12 @@ const toggleClass = 'px-4 py-2 border text-sm transition-colors rounded-full bor
 			</div>
 		</div>
 
-		<details class="group border-t border-gray-200 pt-6">
+		<details class="group border-t border-gray-200 pt-6" bind:open={detailsOpen}>
 			<summary
 				class="flex cursor-pointer select-none items-center gap-2 text-sm font-semibold uppercase tracking-widest text-gray-500 list-none [&::-webkit-details-marker]:hidden"
 			>
 				<span class="text-lg leading-none transition-transform group-open:rotate-45">+</span>
-				<span class="group-open:hidden">
-					Add tasting details{#if hasHiddenDefaults}<span
-							class="ml-2 normal-case tracking-normal font-normal text-gray-400"
-							>brew setup pre-filled</span
-						>{/if}
-				</span>
+				<span class="group-open:hidden">Add tasting details</span>
 				<span class="hidden group-open:inline">Tasting details</span>
 			</summary>
 
@@ -260,11 +295,6 @@ const toggleClass = 'px-4 py-2 border text-sm transition-colors rounded-full bor
 
 				<div class="flex flex-col gap-6">
 					<h3 class={sectionHeadingClass}>Brew</h3>
-					{#if hasHiddenDefaults}
-						<p class="text-[10px] text-gray-400 -mt-4">
-							Pre-filled from your <a href={resolve('/profile')} class="underline">profile defaults</a>.
-						</p>
-					{/if}
 
 					<div class="flex flex-col gap-1">
 						<label for="grindSize" class={labelClass}>Grind Size</label>
@@ -272,7 +302,7 @@ const toggleClass = 'px-4 py-2 border text-sm transition-colors rounded-full bor
 							id="grindSize"
 							name="grindSize"
 							class={inputClass}
-							value={defaults.grindSize ?? ''}
+							bind:value={grindSize}
 						>
 							<option value="" disabled>Select a size</option>
 							{#each GRIND_SIZES as size (size)}
@@ -289,7 +319,7 @@ const toggleClass = 'px-4 py-2 border text-sm transition-colors rounded-full bor
 								name="coffeeGrams"
 								type="number"
 								min="0"
-								value={defaults.coffeeGrams ?? ''}
+								bind:value={coffeeGrams}
 								class={inputClass}
 							/>
 						</div>
@@ -301,7 +331,7 @@ const toggleClass = 'px-4 py-2 border text-sm transition-colors rounded-full bor
 								name="waterGrams"
 								type="number"
 								min="0"
-								value={defaults.waterGrams ?? ''}
+								bind:value={waterGrams}
 								class={inputClass}
 							/>
 						</div>
@@ -313,7 +343,7 @@ const toggleClass = 'px-4 py-2 border text-sm transition-colors rounded-full bor
 								name="waterTempF"
 								type="number"
 								min="0"
-								value={defaults.waterTempF ?? ''}
+								bind:value={waterTempF}
 								class={inputClass}
 							/>
 						</div>
@@ -321,11 +351,9 @@ const toggleClass = 'px-4 py-2 border text-sm transition-colors rounded-full bor
 
 					<div class="flex flex-col gap-1">
 						<span class={labelClass}>Brew Time</span>
-						<BrewTimeInput
-							name="brewTimeSeconds"
-							initialSeconds={defaults.brewTimeSeconds}
-							{inputClass}
-						/>
+						{#key brewTimeVersion}
+							<BrewTimeInput name="brewTimeSeconds" initialSeconds={brewTimeSeed} {inputClass} />
+						{/key}
 					</div>
 
 					<div class="grid grid-cols-2 gap-6">

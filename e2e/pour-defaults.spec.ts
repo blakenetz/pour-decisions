@@ -13,7 +13,7 @@ async function saveDefaults(page: Page) {
 	await expect(page.getByText('Saved.')).toBeVisible()
 }
 
-test('profile defaults pre-fill the pour form, and clearing them removes the pre-fill', async ({
+test('saved defaults fill the pour form only when asked, and clearing them removes the option', async ({
 	page
 }) => {
 	await loginAs(page, process.env.E2E_ZERO_EMAIL as string)
@@ -30,17 +30,25 @@ test('profile defaults pre-fill the pour form, and clearing them removes the pre
 	await saveDefaults(page)
 
 	await open(page, '/pours/new')
+	// Nothing is applied on load.
+	await expect(page.locator('#brewMethod')).toHaveValue('')
+	await expect(page.locator('#coffeeGrams')).toHaveValue('')
+	await expect(page.locator('input[name="brewTimeSeconds"]')).toHaveValue('')
+	await expect(page.locator('#location')).toHaveValue('home')
+
+	await page.getByRole('button', { name: 'Use my brew defaults' }).click()
 	await expect(page.locator('#brewMethod')).toHaveValue('Pour Over')
 	await expect(page.locator('#grindSize')).toHaveValue('Medium-Fine')
 	await expect(page.locator('#coffeeGrams')).toHaveValue('18')
 	await expect(page.locator('#waterGrams')).toHaveValue('300')
 	await expect(page.locator('#waterTempF')).toHaveValue('205')
 	await expect(page.locator('input[name="brewTimeSeconds"]')).toHaveValue('210')
+	await expect(page.getByLabel('Brew time minutes')).toHaveValue('3')
 	await expect(page.locator('#location')).toHaveValue('out')
-	// Most of these live in the collapsed details, so the form must say they're pre-filled.
-	await expect(page.getByText('brew setup pre-filled')).toBeVisible()
+	// The filled fields live in the collapsed details, which opens so they're visible.
+	await expect(page.locator('#grindSize')).toBeVisible()
 
-	// Blank fields mean "no default": clearing everything leaves the form unseeded.
+	// Blank fields mean "no default": with nothing saved, the form offers no fill button.
 	await open(page, '/profile')
 	await page.locator('#brewMethod').selectOption('')
 	await page.locator('#grindSize').selectOption('')
@@ -53,11 +61,8 @@ test('profile defaults pre-fill the pour form, and clearing them removes the pre
 	await saveDefaults(page)
 
 	await open(page, '/pours/new')
-	await expect(page.locator('#brewMethod')).toHaveValue('')
-	await expect(page.locator('#coffeeGrams')).toHaveValue('')
-	await expect(page.locator('input[name="brewTimeSeconds"]')).toHaveValue('')
-	await expect(page.locator('#location')).toHaveValue('home')
-	await expect(page.getByText('brew setup pre-filled')).toHaveCount(0)
+	await expect(page.getByRole('button', { name: 'Use my brew defaults' })).toHaveCount(0)
+	await expect(page.getByRole('link', { name: 'profile' })).toBeVisible()
 })
 
 test('profile rejects a default recipe with less water than coffee', async ({ page }) => {

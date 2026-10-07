@@ -10,7 +10,7 @@ A palate analytics app that helps users track and understand their taste prefere
 ## Features
 
 - **Tasting form** — Log coffee tastings with quantitative and qualitative data (roaster, origin, brew method, boldness, acidity, sweetness, flavor notes, overall rating, notes)
-- **Pour defaults** — Save your usual brew setup (method, grind, dose, water, temp, brew time, where) on the Profile page; it pre-fills the tasting form
+- **Pour defaults** — Save your usual brew setup (method, grind, dose, water, temp, brew time, where) on the Profile page; "Use my brew defaults" on the tasting form fills it in on demand
 - **Dashboard** — Aggregates and visualizes tasting data (trends, favorites, flavor breakdowns)
 - **Auth** — Email/password and social sign-in (Google, GitHub, Apple) via AWS Cognito
 
