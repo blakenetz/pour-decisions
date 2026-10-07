@@ -151,12 +151,25 @@ export class WebStack extends Stack {
 		const serverUrl = server.addFunctionUrl({ authType: FunctionUrlAuthType.NONE })
 
 		// --- CDN ----------------------------------------------------------------------------------
-		const forwardHost = new CloudFrontFunction(this, 'ForwardHost', {
+		// Viewer-request fixups for requests bound for the Function URL:
+		// - copy the viewer's Host into FORWARDED_HOST_HEADER (the URL only ever sees its own host);
+		// - percent-encode '/' in query-string *keys*. Function URLs reject such keys outright
+		//   (400 InvalidQueryStringException, before the function runs), and that is exactly how
+		//   SvelteKit addresses named form actions (`?/saveDefaults`). SvelteKit reads actions from
+		//   decoded `url.searchParams`, so the encoded key resolves to the same action.
+		const serverViewerRequest = new CloudFrontFunction(this, 'ServerViewerRequest', {
 			runtime: FunctionRuntime.JS_2_0,
 			code: FunctionCode.fromInline(
 				`function handler(event) {
 	var request = event.request;
 	request.headers['${FORWARDED_HOST_HEADER}'] = { value: request.headers.host.value };
+	var query = request.querystring;
+	for (var key in query) {
+		if (key.indexOf('/') !== -1) {
+			query[key.split('/').join('%2F')] = query[key];
+			delete query[key];
+		}
+	}
 	return request;
 }`
 			)
@@ -200,7 +213,7 @@ export class WebStack extends Stack {
 				cachePolicy: CachePolicy.CACHING_DISABLED,
 				originRequestPolicy: OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
 				functionAssociations: [
-					{ function: forwardHost, eventType: FunctionEventType.VIEWER_REQUEST }
+					{ function: serverViewerRequest, eventType: FunctionEventType.VIEWER_REQUEST }
 				],
 				responseHeadersPolicy
 			},
