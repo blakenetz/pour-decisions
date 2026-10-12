@@ -45,6 +45,7 @@ new WebStack(app, `PourDecisionsWeb-${environment}`, {
 	lambdaDir,
 	clientDir,
 	tableName: data.tableName,
+	settingsTableName: data.settingsTableName,
 	userPoolId: data.userPoolId,
 	appEnv: {
 		PUBLIC_AWS_REGION: region,
@@ -53,6 +54,7 @@ new WebStack(app, `PourDecisionsWeb-${environment}`, {
 		PUBLIC_COGNITO_DOMAIN: data.cognitoDomain,
 		PUBLIC_OAUTH_SCOPES: 'email,openid,profile',
 		DYNAMODB_TABLE: data.tableName,
+		DYNAMODB_SETTINGS_TABLE: data.settingsTableName,
 		...githubOAuth
 	}
 })

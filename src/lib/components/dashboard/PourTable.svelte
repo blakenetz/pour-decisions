@@ -53,7 +53,14 @@ function formatTime(seconds: number | null): string {
 							</span>
 						</td>
 						<td class="py-2 pr-4">{pour.brewMethod ?? '—'}</td>
-						<td class="py-2 pr-4">{pour.grindSize ?? '—'}</td>
+						<td class="py-2 pr-4">
+							{#if pour.grindSetting}
+								<span class="block whitespace-nowrap">{pour.grindSetting}</span>
+								<span class="block text-xs text-gray-500">{pour.grindSize ?? '—'}</span>
+							{:else}
+								{pour.grindSize ?? '—'}
+							{/if}
+						</td>
 						<td class="py-2 pr-4 tabular-nums">{formatTime(pour.brewTimeSeconds)}</td>
 						<td class="py-2 pr-4 text-right tabular-nums">
 							{pour.quality !== null ? pour.quality.toFixed(2) : '—'}

@@ -17,3 +17,11 @@ export function getTableName(): string {
 	if (!table) throw new Error('DYNAMODB_TABLE is not configured')
 	return table
 }
+
+/** Per-user preferences (one item per `userId`), kept out of the tastings table so every
+ *  per-user tastings query stays "all rows are pours". */
+export function getSettingsTableName(): string {
+	const table = env.DYNAMODB_SETTINGS_TABLE
+	if (!table) throw new Error('DYNAMODB_SETTINGS_TABLE is not configured')
+	return table
+}

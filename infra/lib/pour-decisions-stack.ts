@@ -66,6 +66,15 @@ export class PourDecisionsStack extends Stack {
 			deletionProtection: false // DeletionProtectionEnabled: false
 		})
 
+		// --- DynamoDB table for per-user preferences (e.g. pour-form defaults), one item per user.
+		// Separate from the tastings table so per-user tastings queries keep treating every row as a pour.
+		new TableV2(this, 'UserSettingsTable', {
+			tableName: 'pour-decisions-user-settings',
+			partitionKey: { name: 'userId', type: AttributeType.STRING },
+			billing: Billing.onDemand(),
+			removalPolicy: RemovalPolicy.RETAIN
+		})
+
 		// --- Cognito user pool (aws cognito-idp describe-user-pool --user-pool-id us-west-1_CfmKBSS3p) ---
 		// Schema is intentionally left unspecified: the live pool's SchemaAttributes are exactly
 		// Cognito's un-customized default set (no `standardAttributes`/`customAttributes` were ever

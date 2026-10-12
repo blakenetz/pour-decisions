@@ -10,6 +10,11 @@ A palate analytics app that helps users track and understand their taste prefere
 ## Core Features
 
 - **Tasting form:** A multi-field input form for logging coffee tastings (roaster, origin country + region, process, brew method, grind size, brew time, roast level, the ten 1–5 sub-ratings, taster's own flavor tags, would-buy-again, free-text notes).
+- **Pour defaults (`/profile`):** The user's usual brew setup (`pourDefaultsSchema`: brew method, grind,
+  dose, water, temp, brew time, location), stored one item per user in the separate
+  `DYNAMODB_SETTINGS_TABLE` so tastings queries stay "every row is a pour". Defaults are applied
+  only when the taster clicks "Use my brew defaults" on the pour form — never on load, never
+  server-side to blank fields, and never to ratings or the coffee itself.
 - **Dashboard (`/dashboard`):** Authenticated landing page built around drill-down. A flat fact table (one row per pour) is sent to the client and every chart, filter and finding derives from it, so slicing never costs a round trip. See "Tasting data model" below.
 - **Auth:** Email/password and social sign-in (Google, GitHub, Apple) via AWS Amplify/Cognito.
 
@@ -85,6 +90,18 @@ Anything the dashboard groups by is an enum in `src/lib/types/coffee.ts` — fre
 fragments into ungroupable variants. `country` is separate from `region` so origin-level
 questions ("light or dark for Ethiopia?") are answerable. `grindSize` is ordinal: use
 `grindRank()` for axis ordering, since alphabetically "Coarse" precedes "Extra Fine".
+
+### Grinders
+
+Grinder dials aren't comparable (Encore 0–40, Ode 1–11 with marks, clicks from zero on hand
+grinders), so a pour records the catalog `grinder` (`src/lib/types/grinders.ts`) plus its exact
+`grindSetting` (the dial label as a string, e.g. "4.2"), and `grindSize` is **always derived**
+from them — never accepted from input when a grinder is set. Each grinder maps dial position →
+approximate microns, and microns → band uses Honest Coffee Guide's 200 µm bands, which keeps
+every grinder on the shared fine → coarse axis the dashboard groups and ranks by. Without a
+grinder the taster picks `grindSize` directly. Add grinders from Honest Coffee Guide's
+per-grinder chart (dial range + micron range), not by eye; compound dials (1Zpresso, Eureka,
+Vario) need a different setting input first.
 
 Flavor tags are normalized (`normalizeNote`) at write time so casing never splits a group.
 
