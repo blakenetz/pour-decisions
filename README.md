@@ -2,6 +2,8 @@
 
 A palate analytics app that helps users track and understand their taste preferences through structured tasting entries and data visualization.
 
+Deployed at: https://d3bmjl131h971g.cloudfront.net
+
 ## Vision
 
 - **v1:** Coffee
