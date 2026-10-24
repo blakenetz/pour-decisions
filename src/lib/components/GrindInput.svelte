@@ -28,7 +28,7 @@ const range = $derived(
 const band = $derived(grinder && grindSetting ? grindBand(grinder, grindSetting) : undefined)
 </script>
 
-<div class="grid grid-cols-2 gap-6">
+<div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
 	<div class="flex flex-col gap-1">
 		<label for="grinder" class={labelClass}>Grinder</label>
 		<!-- A setting from one grinder's dial means nothing on another's. -->

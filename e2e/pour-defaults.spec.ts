@@ -34,9 +34,9 @@ test('saved defaults fill the pour form only when asked, and clearing them remov
 	await expect(page.locator('#brewMethod')).toHaveValue('')
 	await expect(page.locator('#coffeeGrams')).toHaveValue('')
 	await expect(page.locator('input[name="brewTimeSeconds"]')).toHaveValue('')
-	await expect(page.locator('#location')).toHaveValue('home')
+	await expect(page.getByRole('button', { name: 'Home' })).toHaveAttribute('aria-pressed', 'true')
 
-	await page.getByRole('button', { name: 'Use my brew defaults' }).click()
+	await page.getByRole('button', { name: 'My defaults' }).click()
 	await expect(page.locator('#brewMethod')).toHaveValue('Pour Over')
 	await expect(page.locator('#grindSize')).toHaveValue('Medium-Fine')
 	await expect(page.locator('#coffeeGrams')).toHaveValue('18')
@@ -44,8 +44,11 @@ test('saved defaults fill the pour form only when asked, and clearing them remov
 	await expect(page.locator('#waterTempF')).toHaveValue('205')
 	await expect(page.locator('input[name="brewTimeSeconds"]')).toHaveValue('210')
 	await expect(page.getByLabel('Brew time minutes')).toHaveValue('3')
-	await expect(page.locator('#location')).toHaveValue('out')
-	// The filled fields live in the collapsed details, which opens so they're visible.
+	await expect(page.getByRole('button', { name: 'Out', exact: true })).toHaveAttribute(
+		'aria-pressed',
+		'true'
+	)
+	// The filled fields live in the collapsed Brew section, which opens so they're visible.
 	await expect(page.locator('#grindSize')).toBeVisible()
 
 	// Blank fields mean "no default": with nothing saved, the form offers no fill button.
@@ -61,7 +64,7 @@ test('saved defaults fill the pour form only when asked, and clearing them remov
 	await saveDefaults(page)
 
 	await open(page, '/pours/new')
-	await expect(page.getByRole('button', { name: 'Use my brew defaults' })).toHaveCount(0)
+	await expect(page.getByRole('button', { name: 'My defaults' })).toHaveCount(0)
 	await expect(page.getByRole('link', { name: 'profile' })).toBeVisible()
 })
 
@@ -79,7 +82,7 @@ test('a grinder replaces grind size with its own dial, filed under a shared band
 	await saveDefaults(page)
 
 	await open(page, '/pours/new')
-	await page.getByRole('button', { name: 'Use my brew defaults' }).click()
+	await page.getByRole('button', { name: 'My defaults' }).click()
 	await expect(page.locator('#grinder')).toHaveValue('baratza-encore')
 	await expect(page.locator('#grindSetting')).toHaveValue('14')
 	await page.locator('#grindSetting').selectOption('32')
@@ -98,7 +101,7 @@ test('a grinder replaces grind size with its own dial, filed under a shared band
 	await expect(page.locator('#grindSize')).toHaveValue('')
 	await saveDefaults(page)
 	await open(page, '/pours/new')
-	await expect(page.getByRole('button', { name: 'Use my brew defaults' })).toHaveCount(0)
+	await expect(page.getByRole('button', { name: 'My defaults' })).toHaveCount(0)
 })
 
 test('profile rejects a default recipe with less water than coffee', async ({ page }) => {

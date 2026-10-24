@@ -1,6 +1,7 @@
-import { PutCommand } from '@aws-sdk/lib-dynamodb'
+import { PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb'
 import { fail, redirect } from '@sveltejs/kit'
 import { ulid } from 'ulid'
+import { lastPour, type PastPourSource, pastCoffees, pastNotes, pastVenues } from '$lib/past-pours'
 import { db, getTableName } from '$lib/server/db'
 import { formNumber as num, formString as str } from '$lib/server/form-data'
 import { getPourDefaults } from '$lib/server/settings'
@@ -18,7 +19,31 @@ import type { Actions, PageServerLoad } from './$types'
 export const load: PageServerLoad = async ({ locals }) => {
 	// Loads run in parallel with the (protected) layout's redirect, so guard here too.
 	if (!locals.user) redirect(302, '/')
-	return { defaults: await getPourDefaults(locals.user.userId) }
+	const [defaults, history] = await Promise.all([
+		getPourDefaults(locals.user.userId),
+		db.send(
+			new QueryCommand({
+				TableName: getTableName(),
+				KeyConditionExpression: 'userId = :userId',
+				ExpressionAttributeValues: { ':userId': locals.user.userId },
+				// Only what the autofills and note suggestions read: no ids or computed scores.
+				ProjectionExpression: '#details, #notes, #createdAt',
+				ExpressionAttributeNames: {
+					'#details': 'details',
+					'#notes': 'notes',
+					'#createdAt': 'createdAt'
+				}
+			})
+		)
+	])
+	const entries = (history.Items ?? []) as PastPourSource[]
+	return {
+		defaults,
+		pastCoffees: pastCoffees(entries),
+		pastNotes: pastNotes(entries),
+		lastPour: lastPour(entries),
+		pastVenues: pastVenues(entries)
+	}
 }
 
 export const actions: Actions = {
@@ -35,6 +60,7 @@ export const actions: Actions = {
 			process: str(data, 'process'),
 			roastLevel: num(data, 'roastLevel'),
 			roasterNotes: parseNotes(str(data, 'roasterNotes')),
+			drinkStyle: str(data, 'drinkStyle'),
 			brewMethod: str(data, 'brewMethod'),
 			grindSize: str(data, 'grindSize'),
 			grinder: str(data, 'grinder'),
@@ -56,6 +82,8 @@ export const actions: Actions = {
 
 		const notes: TastingNotes = {
 			overallRating: num(data, 'overallRating'),
+			fragranceIntensity: num(data, 'fragranceIntensity'),
+			fragranceNotes: str(data, 'fragranceNotes'),
 			aromaIntensity: num(data, 'aromaIntensity'),
 			aromaClarity: num(data, 'aromaClarity'),
 			aromaNotes: str(data, 'aromaNotes'),

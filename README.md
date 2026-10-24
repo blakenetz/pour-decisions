@@ -9,8 +9,12 @@ A palate analytics app that helps users track and understand their taste prefere
 
 ## Features
 
-- **Tasting form** — Log coffee tastings with quantitative and qualitative data (roaster, origin, brew method, grinder + exact dial setting or a descriptive grind size, boldness, acidity, sweetness, flavor notes, overall rating, notes)
-- **Pour defaults** — Save your usual brew setup (method, grind, dose, water, temp, brew time, where) on the Profile page; "Use my brew defaults" on the tasting form fills it in on demand
+- **Tasting form** — Log coffee tastings with quantitative and qualitative data (roaster, origin, process, drink style — an espresso drink fills in the brew method — brew method, where you drank it, grinder + exact dial setting or a descriptive grind size, dry fragrance vs. wet aroma, boldness, acidity, sweetness, flavor notes, overall rating, notes)
+- **Fill from a past pour** — The Roaster and Coffee Name fields suggest coffees you've logged before; picking one fills in origin, process, region, roast level, roaster's notes and roast date from your latest pour of it
+- **Autofill** — "Last setup" fills the coffee, drink, where (including the cafe) and the whole brew setup from your most recent pour, leaving ratings and notes blank for the new cup; "Last entry" copies that pour in full, ratings and notes included. The brew date always stays today
+- **Flavor tags** — Roaster's notes and what you tasted are entered as tags, with suggestions from your own past notes and common cupping descriptors; the roaster's notes are one tap away when logging what you tasted
+- **Where you drank it** — Home or Out; Out shows your recent cafes as one-tap chips, and venue search favors the area of the last cafe you logged
+- **Pour defaults** — Save your usual brew setup (method, grind, dose, water, temp, brew time, where) on the Profile page; the "My defaults" autofill on the tasting form fills it in on demand
 - **Dashboard** — Aggregates and visualizes tasting data (trends, favorites, flavor breakdowns)
 - **Auth** — Email/password and social sign-in (Google, GitHub, Apple) via AWS Cognito
 

@@ -31,7 +31,14 @@ export default defineConfig({
 	projects: [
 		{
 			name: 'chromium',
+			testIgnore: /mobile\.spec\.ts/,
 			use: { ...devices['Desktop Chrome'] }
+		},
+		{
+			// Phones are the primary device; layout specs run on a phone viewport.
+			name: 'mobile',
+			testMatch: /mobile\.spec\.ts/,
+			use: { ...devices['Pixel 7'] }
 		}
 	],
 	webServer: {
