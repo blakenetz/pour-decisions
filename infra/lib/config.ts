@@ -8,20 +8,50 @@ export const githubRepo = 'blakenetz/pour-decisions'
 /** Name of the IAM role GitHub Actions assumes; referenced verbatim by .github/workflows/deploy.yml. */
 export const githubDeployRoleName = 'pour-decisions-github-deploy'
 
+/** Role the PR e2e run assumes to seed its test accounts; referenced verbatim by deploy.yml. */
+export const githubE2eRoleName = 'pour-decisions-github-e2e'
+
 export const deployEnvironments = ['dev', 'prod'] as const
 export type DeployEnvironment = (typeof deployEnvironments)[number]
 
-/**
- * Live resources owned by PourDecisionsStack. Every environment points at the same ones until
- * per-environment data infrastructure exists.
- */
-export const data = {
-	tableName: 'pour-decisions-tastings',
-	settingsTableName: 'pour-decisions-user-settings',
-	userPoolId: 'us-west-1_CfmKBSS3p',
-	userPoolClientId: '662qvpjlv07qrt7qraiuj13gdd',
-	cognitoDomain: 'us-west-1cfmkbss3p.auth.us-west-1.amazoncognito.com'
+/** Data and auth resources one environment's app reads and writes. */
+export interface DataConfig {
+	tableName: string
+	settingsTableName: string
+	userPoolId: string
+	userPoolClientId: string
+	/** Hosted-UI domain prefix; the full domain is `cognitoDomain`. */
+	domainPrefix: string
+	cognitoDomain: string
 }
+
+/**
+ * Each environment's data and auth. Prod's are the original resources owned by
+ * PourDecisionsStack; dev's are created by DataStack (`PourDecisionsData-dev`), whose stack
+ * outputs supply the Cognito ids. Dev serves PR deploys, local `pnpm dev`, and e2e seeding.
+ */
+export const data: Record<DeployEnvironment, DataConfig> = {
+	dev: {
+		tableName: 'pour-decisions-tastings-dev',
+		settingsTableName: 'pour-decisions-user-settings-dev',
+		userPoolId: 'us-west-1_wmKLnq0rh',
+		userPoolClientId: '2glrp0sangmaoq65kjltk70qi6',
+		domainPrefix: 'pour-decisions-dev',
+		cognitoDomain: 'pour-decisions-dev.auth.us-west-1.amazoncognito.com'
+	},
+	prod: {
+		tableName: 'pour-decisions-tastings',
+		settingsTableName: 'pour-decisions-user-settings',
+		userPoolId: 'us-west-1_CfmKBSS3p',
+		userPoolClientId: '662qvpjlv07qrt7qraiuj13gdd',
+		domainPrefix: 'us-west-1cfmkbss3p',
+		cognitoDomain: 'us-west-1cfmkbss3p.auth.us-west-1.amazoncognito.com'
+	}
+}
+
+/** The Google OAuth client every pool federates to (Google Cloud Console → Credentials). */
+export const googleClientId =
+	'645041553517-v47va3nlqsjdo45mfmu35lvd2562tcbq.apps.googleusercontent.com'
 
 /**
  * Origins each web environment is served from. CloudFront assigns these domains when the

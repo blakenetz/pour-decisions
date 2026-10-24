@@ -39,22 +39,24 @@ if (process.env.GH_OAUTH_CLIENT_ID && process.env.GH_OAUTH_CLIENT_SECRET) {
 	githubOAuth.GITHUB_CLIENT_SECRET = process.env.GH_OAUTH_CLIENT_SECRET
 }
 
+const envData = data[environment]
+
 new WebStack(app, `PourDecisionsWeb-${environment}`, {
 	env: { account, region },
 	environment,
 	lambdaDir,
 	clientDir,
-	tableName: data.tableName,
-	settingsTableName: data.settingsTableName,
-	userPoolId: data.userPoolId,
+	tableName: envData.tableName,
+	settingsTableName: envData.settingsTableName,
+	userPoolId: envData.userPoolId,
 	appEnv: {
 		PUBLIC_AWS_REGION: region,
-		PUBLIC_COGNITO_USER_POOL_ID: data.userPoolId,
-		PUBLIC_COGNITO_USER_POOL_CLIENT_ID: data.userPoolClientId,
-		PUBLIC_COGNITO_DOMAIN: data.cognitoDomain,
+		PUBLIC_COGNITO_USER_POOL_ID: envData.userPoolId,
+		PUBLIC_COGNITO_USER_POOL_CLIENT_ID: envData.userPoolClientId,
+		PUBLIC_COGNITO_DOMAIN: envData.cognitoDomain,
 		PUBLIC_OAUTH_SCOPES: 'email,openid,profile',
-		DYNAMODB_TABLE: data.tableName,
-		DYNAMODB_SETTINGS_TABLE: data.settingsTableName,
+		DYNAMODB_TABLE: envData.tableName,
+		DYNAMODB_SETTINGS_TABLE: envData.settingsTableName,
 		...githubOAuth
 	}
 })
