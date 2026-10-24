@@ -72,8 +72,8 @@ jobs:
         if: github.event_name == 'pull_request'
         run: pnpm exec playwright install --with-deps chromium
 
-      # The suite's global setup seeds the test accounts; this role may only touch the tastings
-      # table and only `dev` jobs can assume it (infra/lib/ci-stack.ts).
+      # The suite's global setup seeds the test accounts in dev's tastings table; this role may
+      # only touch that table and only `dev` jobs can assume it (infra/lib/ci-stack.ts).
       - uses: aws-actions/configure-aws-credentials@v6
         if: github.event_name == 'pull_request'
         with:
@@ -85,7 +85,7 @@ jobs:
         env:
           E2E_BASE_URL: ${{ steps.deploy.outputs.url }}
           E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
-          DYNAMODB_TABLE: pour-decisions-tastings
+          DYNAMODB_TABLE: pour-decisions-tastings-dev
           PUBLIC_AWS_REGION: us-west-1
         run: pnpm test:e2e
 

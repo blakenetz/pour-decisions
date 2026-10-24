@@ -3,12 +3,15 @@ import { App } from 'aws-cdk-lib'
 import { CiStack } from '../lib/ci-stack'
 import {
 	account,
+	data,
 	githubDeployRoleName,
 	githubE2eRoleName,
 	githubRepo,
+	googleClientId,
 	region,
 	webOrigins
 } from '../lib/config'
+import { DataStack } from '../lib/data-stack'
 import { PourDecisionsStack } from '../lib/pour-decisions-stack'
 
 // Reuse the root app's .env instead of duplicating secrets into infra/. `cdk synth`/`cdk import`
@@ -39,4 +42,13 @@ new CiStack(app, 'PourDecisionsCiStack', {
 	githubRepo,
 	roleName: githubDeployRoleName,
 	e2eRoleName: githubE2eRoleName
+})
+
+new DataStack(app, 'PourDecisionsData-dev', {
+	env: { account, region },
+	environment: 'dev',
+	data: data.dev,
+	appOrigins: ['http://localhost:8008', webOrigins.dev],
+	googleClientId,
+	googleClientSecret
 })

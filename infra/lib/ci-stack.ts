@@ -26,7 +26,7 @@ export interface CiStackProps extends StackProps {
  * requests from forks never receive an OIDC token for these environments.
  *
  * A second, narrower role lets the pull-request e2e run seed its test accounts: only `dev` jobs
- * may assume it, and it can only read, write and delete items in the tastings table.
+ * may assume it, and it can only read, write and delete items in dev's tastings table.
  */
 export class CiStack extends Stack {
 	constructor(scope: Construct, id: string, props: CiStackProps) {
@@ -75,7 +75,7 @@ export class CiStack extends Stack {
 		e2eRole.addToPolicy(
 			new PolicyStatement({
 				actions: ['dynamodb:Query', 'dynamodb:PutItem', 'dynamodb:DeleteItem'],
-				resources: [`arn:aws:dynamodb:${this.region}:${this.account}:table/${data.tableName}`]
+				resources: [`arn:aws:dynamodb:${this.region}:${this.account}:table/${data.dev.tableName}`]
 			})
 		)
 	}
