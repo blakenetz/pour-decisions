@@ -1,5 +1,6 @@
-# Pull requests deploy to the single shared `dev` environment (latest push wins); pushes to main
-# deploy `prod`. Each environment is one CDK stack, PourDecisionsWeb-<env> (infra/bin/web.ts).
+# Pull requests deploy to the single shared `dev` environment (latest push wins), then run the
+# Playwright suite against it; pushes to main deploy `prod`. Each environment is one CDK stack,
+# PourDecisionsWeb-<env> (infra/bin/web.ts).
 name: Deploy
 
 on:
@@ -64,3 +65,34 @@ jobs:
         run: |
           pnpm run web:deploy -c env=${{ github.event_name == 'push' && 'prod' || 'dev' }} --outputs-file outputs.json
           echo "url=$(jq -r '.[].Url' outputs.json)" >> "$GITHUB_OUTPUT"
+
+      # E2E runs in this job, not a separate one, so it holds the dev concurrency lock: another
+      # PR can't redeploy dev between this deploy and its tests.
+      - name: Install Playwright browser
+        if: github.event_name == 'pull_request'
+        run: pnpm exec playwright install --with-deps chromium
+
+      # The suite's global setup seeds the test accounts; this role may only touch the tastings
+      # table and only `dev` jobs can assume it (infra/lib/ci-stack.ts).
+      - uses: aws-actions/configure-aws-credentials@v6
+        if: github.event_name == 'pull_request'
+        with:
+          role-to-assume: arn:aws:iam::187864192245:role/pour-decisions-github-e2e
+          aws-region: us-west-1
+
+      - name: E2E against dev
+        if: github.event_name == 'pull_request'
+        env:
+          E2E_BASE_URL: ${{ steps.deploy.outputs.url }}
+          E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
+          DYNAMODB_TABLE: pour-decisions-tastings
+          PUBLIC_AWS_REGION: us-west-1
+        run: pnpm test:e2e
+
+      - name: Upload e2e traces
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-test-results
+          path: test-results/
+          retention-days: 7

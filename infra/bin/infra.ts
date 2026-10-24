@@ -1,7 +1,14 @@
 #!/usr/bin/env node
 import { App } from 'aws-cdk-lib'
 import { CiStack } from '../lib/ci-stack'
-import { account, githubDeployRoleName, githubRepo, region, webOrigins } from '../lib/config'
+import {
+	account,
+	githubDeployRoleName,
+	githubE2eRoleName,
+	githubRepo,
+	region,
+	webOrigins
+} from '../lib/config'
 import { PourDecisionsStack } from '../lib/pour-decisions-stack'
 
 // Reuse the root app's .env instead of duplicating secrets into infra/. `cdk synth`/`cdk import`
@@ -30,5 +37,6 @@ new PourDecisionsStack(app, 'PourDecisionsStack', {
 new CiStack(app, 'PourDecisionsCiStack', {
 	env: { account, region },
 	githubRepo,
-	roleName: githubDeployRoleName
+	roleName: githubDeployRoleName,
+	e2eRoleName: githubE2eRoleName
 })

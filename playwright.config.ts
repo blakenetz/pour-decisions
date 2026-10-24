@@ -16,6 +16,9 @@ try {
 	// optional
 }
 
+// CI runs the suite against the freshly deployed dev URL; locally it starts (or reuses) `pnpm dev`.
+const deployedUrl = process.env.E2E_BASE_URL
+
 export default defineConfig({
 	testDir: './e2e',
 	globalSetup: './e2e/global-setup.ts',
@@ -25,7 +28,7 @@ export default defineConfig({
 	workers: 1,
 	reporter: 'line',
 	use: {
-		baseURL: 'http://localhost:8008',
+		baseURL: deployedUrl ?? 'http://localhost:8008',
 		trace: 'on-first-retry'
 	},
 	projects: [
@@ -41,10 +44,12 @@ export default defineConfig({
 			use: { ...devices['Pixel 7'] }
 		}
 	],
-	webServer: {
-		command: 'pnpm dev',
-		url: 'http://localhost:8008',
-		reuseExistingServer: true,
-		timeout: 30_000
-	}
+	webServer: deployedUrl
+		? undefined
+		: {
+				command: 'pnpm dev',
+				url: 'http://localhost:8008',
+				reuseExistingServer: true,
+				timeout: 30_000
+			}
 })

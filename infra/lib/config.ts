@@ -8,6 +8,9 @@ export const githubRepo = 'blakenetz/pour-decisions'
 /** Name of the IAM role GitHub Actions assumes; referenced verbatim by .github/workflows/deploy.yml. */
 export const githubDeployRoleName = 'pour-decisions-github-deploy'
 
+/** Role the PR e2e run assumes to seed its test accounts; referenced verbatim by deploy.yml. */
+export const githubE2eRoleName = 'pour-decisions-github-e2e'
+
 export const deployEnvironments = ['dev', 'prod'] as const
 export type DeployEnvironment = (typeof deployEnvironments)[number]
 
