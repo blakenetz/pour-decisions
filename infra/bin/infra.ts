@@ -34,7 +34,8 @@ new PourDecisionsStack(app, 'PourDecisionsStack', {
 	env: { account, region },
 	googleClientSecret,
 	githubClientSecret,
-	appOrigins: ['http://localhost:8008', ...Object.values(webOrigins)]
+	// Only production's own origin: localhost and PR deploys sign in through the dev pool.
+	appOrigins: [webOrigins.prod]
 })
 
 new CiStack(app, 'PourDecisionsCiStack', {
