@@ -9,7 +9,15 @@
  * On select it fills four hidden inputs consumed by the form action:
  * `locationName`, `locationAddress`, `locationLat`, `locationLng`. Free text
  * that never matches a suggestion still submits as `locationName`.
+ *
+ * Venues the taster has logged before show as one-tap chips, and searches lean
+ * toward the most recent one that has coordinates, so a chain name finds the
+ * nearby branch without asking for location permission.
  */
+
+import { untrack } from 'svelte'
+import type { PastVenue } from '$lib/past-pours'
+import ClearButton from './ClearButton.svelte'
 
 const PHOTON_URL = 'https://photon.komoot.io/api/'
 
@@ -55,16 +63,30 @@ type Suggestion = {
 	lng: number
 }
 
-let query = $state('')
+let {
+	initial,
+	recent = []
+}: {
+	/** Venue to start from, e.g. when repeating a pour at the same cafe. Read once on mount. */
+	initial?: PastVenue
+	/** Venues from earlier pours, most recent first. */
+	recent?: readonly PastVenue[]
+} = $props()
+
+const seed = untrack(() => initial)
+
+let query = $state(seed?.name ?? '')
 let suggestions = $state<Suggestion[]>([])
 let activeIndex = $state(-1)
 let open = $state(false)
 let loadFailed = $state(false)
 
-let name = $state('')
-let address = $state('')
-let lat: number | undefined = $state(undefined)
-let lng: number | undefined = $state(undefined)
+let name = $state(seed?.name ?? '')
+let address = $state(seed?.address ?? '')
+let lat: number | undefined = $state(seed?.lat)
+let lng: number | undefined = $state(seed?.lng)
+
+const near = $derived(recent.find((venue) => venue.lat !== undefined && venue.lng !== undefined))
 
 let debounceTimer: ReturnType<typeof setTimeout> | undefined
 let controller: AbortController | undefined
@@ -97,6 +119,10 @@ async function search(term: string) {
 
 	const params = new URLSearchParams({ q: term, limit: String(RESULT_LIMIT), lang: 'en' })
 	for (const tag of VENUE_TAGS) params.append('osm_tag', tag)
+	if (near?.lat !== undefined && near.lng !== undefined) {
+		params.set('lat', String(near.lat))
+		params.set('lon', String(near.lng))
+	}
 
 	try {
 		const res = await fetch(`${PHOTON_URL}?${params}`, { signal: controller.signal })
@@ -134,13 +160,26 @@ function handleInput() {
 	debounceTimer = setTimeout(() => search(term), DEBOUNCE_MS)
 }
 
-function select(suggestion: Suggestion) {
-	query = suggestion.name
-	name = suggestion.name
-	address = suggestion.address
-	lat = suggestion.lat
-	lng = suggestion.lng
+function select(venue: PastVenue) {
+	query = venue.name
+	name = venue.name
+	address = venue.address ?? ''
+	lat = venue.lat
+	lng = venue.lng
 
+	suggestions = []
+	activeIndex = -1
+	open = false
+}
+
+function clear() {
+	controller?.abort()
+	clearTimeout(debounceTimer)
+	query = ''
+	name = ''
+	address = ''
+	lat = undefined
+	lng = undefined
 	suggestions = []
 	activeIndex = -1
 	open = false
@@ -187,61 +226,94 @@ $effect(() => {
 })
 </script>
 
-<div class="relative">
+<div class="flex flex-col gap-3">
 	<input type="hidden" name="locationName" value={name} />
 	<input type="hidden" name="locationAddress" value={address} />
 	<input type="hidden" name="locationLat" value={lat ?? ''} />
 	<input type="hidden" name="locationLng" value={lng ?? ''} />
 
-	<input
-		type="text"
-		role="combobox"
-		aria-expanded={open}
-		aria-controls={listboxId}
-		aria-autocomplete="list"
-		autocomplete="off"
-		bind:value={query}
-		oninput={handleInput}
-		onkeydown={handleKeydown}
-		onfocus={() => {
-			if (suggestions.length > 0) open = true
-		}}
-		onblur={handleBlur}
-		placeholder="Where'd you go? e.g. Blue Bottle Coffee"
-		class="w-full border-b border-dark-ink bg-transparent py-2 focus:outline-none placeholder:text-gray-300"
-	/>
+	<div class="relative">
+		<div class="relative">
+			<input
+				type="text"
+				role="combobox"
+				aria-label="Cafe or venue"
+				aria-expanded={open}
+				aria-controls={listboxId}
+				aria-autocomplete="list"
+				autocomplete="off"
+				bind:value={query}
+				oninput={handleInput}
+				onkeydown={handleKeydown}
+				onfocus={() => {
+					if (suggestions.length > 0) open = true
+				}}
+				onblur={handleBlur}
+				placeholder="Search cafes, e.g. Blue Bottle Coffee"
+				class="w-full border-b border-dark-ink bg-transparent py-2 pr-10 focus:outline-none placeholder:text-gray-300"
+			/>
+			<!-- Inside the field's right edge, so the input keeps the full width of the fields above. -->
+			<span class="absolute inset-y-0 right-3 flex items-center">
+				<ClearButton label="venue" active={query !== ''} onclick={clear} />
+			</span>
+		</div>
+		{#if address}
+			<p class="mt-1 text-xs text-gray-400">{address}</p>
+		{/if}
 
-	{#if open}
-		<ul
-			id={listboxId}
-			role="listbox"
-			class="absolute z-10 mt-1 w-full overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg"
-		>
-			{#each suggestions as suggestion, index (suggestion.key)}
-				<li role="option" aria-selected={index === activeIndex}>
+		{#if open}
+			<ul
+				id={listboxId}
+				role="listbox"
+				class="absolute z-10 mt-1 w-full overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg"
+			>
+				{#each suggestions as suggestion, index (suggestion.key)}
+					<li role="option" aria-selected={index === activeIndex}>
+						<button
+							type="button"
+							onmousedown={(event) => {
+								event.preventDefault()
+								select(suggestion)
+							}}
+							onmouseenter={() => {
+								activeIndex = index
+							}}
+							class="flex min-h-11 w-full flex-col justify-center px-3 py-2 text-left hover:bg-gray-50"
+							class:bg-gray-50={index === activeIndex}
+						>
+							<span class="text-sm text-dark-ink">{suggestion.name}</span>
+							{#if suggestion.address}
+								<span class="text-xs text-gray-400">{suggestion.address}</span>
+							{/if}
+						</button>
+					</li>
+				{/each}
+			</ul>
+		{/if}
+	</div>
+
+	{#if recent.length > 0 && name === ''}
+		<div class="flex flex-col gap-2">
+			<span class="text-[10px] uppercase tracking-widest text-gray-400">Recent</span>
+			<!-- One row like the choice pills: scrolls sideways on phones instead of wrapping. -->
+			<div
+				class="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden"
+			>
+				{#each recent as venue (`${venue.name}|${venue.address ?? ''}`)}
 					<button
 						type="button"
-						onmousedown={(event) => {
-							event.preventDefault()
-							select(suggestion)
-						}}
-						onmouseenter={() => {
-							activeIndex = index
-						}}
-						class="flex w-full flex-col px-3 py-2 text-left hover:bg-gray-50"
-						class:bg-gray-50={index === activeIndex}
+						title={venue.address}
+						onclick={() => select(venue)}
+						class="min-h-11 min-w-11 shrink-0 whitespace-nowrap rounded-full border border-dashed border-dark-ink px-3 py-2 text-sm text-dark-ink"
 					>
-						<span class="text-sm text-dark-ink">{suggestion.name}</span>
-						{#if suggestion.address}
-							<span class="text-xs text-gray-400">{suggestion.address}</span>
-						{/if}
+						{venue.name}
 					</button>
-				</li>
-			{/each}
-		</ul>
+				{/each}
+			</div>
+		</div>
 	{/if}
 
 	{#if loadFailed}
-		<p class="mt-1 text-xs text-gray-400">Venue search unavailable — type it manually.</p>
+		<p class="text-xs text-gray-400">Venue search unavailable — type it manually.</p>
 	{/if}
 </div>

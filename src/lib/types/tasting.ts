@@ -1,5 +1,12 @@
 import { z } from 'zod'
-import { BREW_METHODS, COUNTRIES, GRIND_SIZES, type GrindSize, PROCESSES } from './coffee'
+import {
+	BREW_METHODS,
+	COUNTRIES,
+	DRINK_STYLES,
+	GRIND_SIZES,
+	type GrindSize,
+	PROCESSES
+} from './coffee'
 import { dialPosition, GRINDER_IDS, type GrinderId, grindBand, grinderName } from './grinders'
 
 export type BeverageType = 'coffee'
@@ -22,6 +29,8 @@ export interface TastingDetails {
 	roastLevel?: number
 	/** Normalized tags the roaster printed on the bag, e.g. ["raspberry", "vanilla"] */
 	roasterNotes?: string[]
+	/** What was served, e.g. "Cappuccino" ({@link DRINK_STYLES}). */
+	drinkStyle?: string
 	brewMethod?: string
 	/** Shared fine → coarse band ({@link GRIND_SIZES}). With a {@link grinder} it is always
 	 *  derived from {@link grindSetting}; without one the taster picks it directly. */
@@ -53,6 +62,7 @@ const tastingDetailsObject = z.object({
 	process: z.enum(PROCESSES).optional(),
 	roastLevel: z.number().int().min(1).max(10).optional(),
 	roasterNotes: z.array(z.string().trim().min(1).max(60)).max(20).optional(),
+	drinkStyle: z.enum(DRINK_STYLES).optional(),
 	brewMethod: z.enum(BREW_METHODS).optional(),
 	grindSize: z.enum(GRIND_SIZES).optional(),
 	grinder: z.enum(GRINDER_IDS).optional(),
@@ -158,6 +168,12 @@ export interface TastingNotes {
 	/** 1–10. The taster's direct, holistic judgment — distinct from
 	 *  `TastingEntry.qualityScore`, which is computed from the evaluative fields below. */
 	overallRating?: number
+	/** 1–5. Descriptive: how strongly the dry grounds smell, before any water. Kept out of
+	 *  {@link computeIntensityScore} so intensity scores stay comparable with pours logged
+	 *  before fragrance was recorded. */
+	fragranceIntensity?: number
+	/** What the dry grounds smell like; compare against {@link aromaNotes} for the wet cup. */
+	fragranceNotes?: string
 	/** 1–5. Descriptive: how loud the aroma is, not how good. */
 	aromaIntensity?: number
 	/** 1–5. Evaluative: how clean and distinct the aroma reads. */
@@ -245,6 +261,8 @@ export function computeIntensityScore(notes: TastingNotes | undefined): number |
 
 export const tastingNotesSchema = z.object({
 	overallRating: z.number().int().min(1).max(10).optional(),
+	fragranceIntensity: z.number().int().min(1).max(5).optional(),
+	fragranceNotes: z.string().trim().max(1000).optional(),
 	aromaIntensity: z.number().int().min(1).max(5).optional(),
 	aromaClarity: z.number().int().min(1).max(5).optional(),
 	aromaNotes: z.string().trim().max(1000).optional(),
@@ -304,6 +322,6 @@ export const createTastingInputSchema = z
 /** The day a pour belongs to on a timeline: the brew date the taster entered, or
  *  the server write time when they left it blank. Every time series uses this —
  *  `createdAt` alone misfiles a pour logged days after it was brewed. */
-export function pourDate(entry: TastingEntry): string {
+export function pourDate(entry: Pick<TastingEntry, 'details' | 'createdAt'>): string {
 	return entry.details?.brewDate ?? entry.createdAt.slice(0, 10)
 }
