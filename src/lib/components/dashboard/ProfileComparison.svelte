@@ -32,6 +32,10 @@ const data = $derived.by(() => {
 		{ axis: row.axis, series: baselineLabel, value: all[index].value }
 	])
 })
+
+// LayerChart pins the legend to the chart's bottom edge, so when it shows, the bottom padding
+// reserves a strip for it below the axis labels and the height grows to match.
+const legendSpace = $derived(identical ? 0 : 20)
 </script>
 
 {#if selection.length === 0}
@@ -46,8 +50,8 @@ const data = $derived.by(() => {
 		seriesLayout="group"
 		yDomain={[0, 5]}
 		cRange={['#1f2937', '#cbd5e1']}
-		height={240}
-		padding={{ left: 32, bottom: 28, top: 8, right: 8 }}
+		height={240 + legendSpace}
+		padding={{ left: 32, bottom: 28 + legendSpace, top: 8, right: 8 }}
 		legend={!identical}
 		motion="spring"
 		props={{

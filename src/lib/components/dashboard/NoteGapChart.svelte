@@ -13,7 +13,10 @@ const data = $derived(
 	])
 )
 
-const height = $derived(Math.max(200, rows.length * 44 + 40))
+// LayerChart pins the legend to the chart's bottom edge, so the bottom padding reserves a strip
+// for it below the axis labels; the height grows to match so the bars keep their size.
+const LEGEND_SPACE = 20
+const height = $derived(Math.max(200, rows.length * 44 + 40) + LEGEND_SPACE)
 </script>
 
 {#if rows.length === 0}
@@ -32,7 +35,7 @@ const height = $derived(Math.max(200, rows.length * 44 + 40))
 		seriesLayout="group"
 		cRange={['#cbd5e1', '#1f2937']}
 		{height}
-		padding={{ left: 104, bottom: 24, top: 4, right: 12 }}
+		padding={{ left: 104, bottom: 24 + LEGEND_SPACE, top: 4, right: 12 }}
 		legend
 		props={{
 			yAxis: { format: 'none' },
