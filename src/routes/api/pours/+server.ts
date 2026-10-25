@@ -50,8 +50,8 @@ export const POST: RequestHandler = async ({ request }) => {
 		error(400, parsed.error.issues[0].message)
 	}
 
-	const qualityScore = computeQualityScore(parsed.data.notes)
-	const intensityScore = computeIntensityScore(parsed.data.notes)
+	const qualityScore = computeQualityScore(parsed.data)
+	const intensityScore = computeIntensityScore(parsed.data)
 
 	const entry: TastingEntry = {
 		userId,

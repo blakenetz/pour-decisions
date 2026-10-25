@@ -89,4 +89,11 @@ test.describe('dashboard drill-down', () => {
 		await expect(page.getByRole('button', { name: /Origin: Ethiopia/ })).toHaveCount(0)
 		await expect(page.getByText(String(HIGH_TIER_POURS), { exact: true }).first()).toBeVisible()
 	})
+
+	test('beer slice shows beer breakdowns and hops', async ({ page }) => {
+		await page.locator('#filter-beverage').selectOption('Beer')
+
+		await expect(page.locator('#breakdown option[value="styleFamily"]')).toHaveCount(1)
+		await expect(page.getByRole('heading', { name: 'Hops you keep coming back to' })).toBeVisible()
+	})
 })

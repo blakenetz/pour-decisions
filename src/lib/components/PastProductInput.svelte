@@ -1,15 +1,15 @@
 <script lang="ts">
 /**
- * Text field that suggests coffees the taster has logged before. Picking one hands it to
- * `onpick` so the page can fill the coffee's details; typing anything else is plain free text.
+ * Text field that suggests coffees or beers the taster has logged before. Picking one hands it
+ * to `onpick` so the page can fill its details; typing anything else is plain free text.
  */
-import { matchCoffees, type PastCoffee } from '$lib/past-pours'
+import { matchProducts, type PastProduct } from '$lib/past-pours'
 
 let {
 	id,
 	name,
 	value = $bindable(''),
-	coffees,
+	products,
 	onpick,
 	placeholder = '',
 	inputClass
@@ -18,8 +18,8 @@ let {
 	id: string
 	name: string
 	value?: string
-	coffees: readonly PastCoffee[]
-	onpick: (coffee: PastCoffee) => void
+	products: readonly PastProduct[]
+	onpick: (product: PastProduct) => void
 	placeholder?: string
 	inputClass: string
 } = $props()
@@ -28,7 +28,7 @@ let open = $state(false)
 let activeIndex = $state(-1)
 
 const listboxId = $derived(`${id}-suggestions`)
-const matches = $derived(matchCoffees(coffees, value))
+const matches = $derived(matchProducts(products, value))
 const showList = $derived(open && matches.length > 0)
 
 const dateFormatter = new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric' })
@@ -38,8 +38,8 @@ function formatDay(day: string): string {
 	return dateFormatter.format(new Date(`${day}T00:00`))
 }
 
-function pick(coffee: PastCoffee) {
-	onpick(coffee)
+function pick(product: PastProduct) {
+	onpick(product)
 	open = false
 	activeIndex = -1
 }
@@ -100,26 +100,27 @@ function handleKeydown(event: KeyboardEvent) {
 			<li class="px-3 pt-2 text-[10px] uppercase tracking-widest text-gray-400" aria-hidden="true">
 				Logged before
 			</li>
-			{#each matches as coffee, index (coffee.key)}
+			{#each matches as product, index (product.key)}
 				<li role="option" aria-selected={index === activeIndex}>
 					<button
 						type="button"
 						onmousedown={(event) => {
 							// Keeps focus in the field until the pick lands; blur would close the list first.
 							event.preventDefault()
-							pick(coffee)
+							pick(product)
 						}}
 						onmouseenter={() => (activeIndex = index)}
-						class="flex min-h-11 w-full flex-col justify-center px-3 py-2 text-left hover:bg-gray-50"
-						class:bg-gray-50={index === activeIndex}
+						class={[
+							'flex min-h-11 w-full flex-col justify-center px-3 py-2 text-left hover:bg-gray-50',
+							{ 'bg-gray-50': index === activeIndex }
+						]}
 					>
-						<span class="text-sm text-dark-ink">{coffee.productName ?? coffee.roaster}</span>
+						<span class="text-sm text-dark-ink">{product.productName ?? product.producer}</span>
 						<span class="text-xs text-gray-400">
 							{[
-								coffee.productName ? coffee.roaster : undefined,
-								coffee.country,
-								coffee.process,
-								`last ${formatDay(coffee.lastBrewed)}`
+								product.productName ? product.producer : undefined,
+								...product.facts,
+								`last ${formatDay(product.lastBrewed)}`
 							]
 								.filter(Boolean)
 								.join(' · ')}

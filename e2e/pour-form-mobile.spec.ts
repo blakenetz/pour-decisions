@@ -12,11 +12,18 @@ async function expectNoHorizontalScroll(page: Page) {
 	expect(scrollWidth).toBeLessThanOrEqual(innerWidth)
 }
 
-/** Expands every collapsible section of the tasting details. */
+/** Expands every collapsed section of the tasting details; already-open ones stay open. Opening
+ *  one drops it from the `:not([open])` match, so this always clicks the first left. */
 async function openAllSections(page: Page) {
-	for (const summary of await page.locator('form details > summary').all()) {
-		await summary.click()
+	const collapsed = page.locator('form details:not([open]) > summary')
+	while ((await collapsed.count()) > 0) {
+		await collapsed.first().click()
 	}
+}
+
+/** The form opens on whichever beverage the account logged last, so tests pick one. */
+async function chooseBeverage(page: Page, beverage: 'Coffee' | 'Beer') {
+	await page.getByRole('button', { name: beverage, exact: true }).click()
 }
 
 test.beforeEach(async ({ page }) => {
@@ -28,6 +35,7 @@ test.beforeEach(async ({ page }) => {
 test('Save stays on screen and the page never scrolls sideways', async ({ page }) => {
 	const save = page.getByRole('button', { name: 'Save' })
 
+	await chooseBeverage(page, 'Coffee')
 	await expect(save).toBeInViewport()
 	await expectNoHorizontalScroll(page)
 
@@ -42,15 +50,18 @@ test('Save stays on screen and the page never scrolls sideways', async ({ page }
 })
 
 test('rating scales and toggles are big enough to tap', async ({ page }) => {
-	await openAllSections(page)
+	for (const beverage of ['Coffee', 'Beer'] as const) {
+		await chooseBeverage(page, beverage)
+		await openAllSections(page)
 
-	const targets = page.locator('form button[type="button"]:visible')
-	const count = await targets.count()
-	expect(count).toBeGreaterThan(0)
-	for (let i = 0; i < count; i++) {
-		const box = await targets.nth(i).boundingBox()
-		const label = await targets.nth(i).textContent()
-		expect(box?.height, `"${label?.trim()}" height`).toBeGreaterThanOrEqual(MIN_TAP)
-		expect(box?.width, `"${label?.trim()}" width`).toBeGreaterThanOrEqual(MIN_TAP)
+		const targets = page.locator('form button[type="button"]:visible')
+		const count = await targets.count()
+		expect(count).toBeGreaterThan(0)
+		for (let i = 0; i < count; i++) {
+			const box = await targets.nth(i).boundingBox()
+			const label = await targets.nth(i).textContent()
+			expect(box?.height, `${beverage}: "${label?.trim()}" height`).toBeGreaterThanOrEqual(MIN_TAP)
+			expect(box?.width, `${beverage}: "${label?.trim()}" width`).toBeGreaterThanOrEqual(MIN_TAP)
+		}
 	}
 })

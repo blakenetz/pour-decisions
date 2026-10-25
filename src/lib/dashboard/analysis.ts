@@ -1,20 +1,24 @@
+import { BEER_STYLE_FAMILIES, SERVINGS } from '../types/beer'
 import { grindRank, ROAST_BANDS, roastBand } from '../types/coffee'
 import { formatGrindSetting, GRINDERS, type GrinderId } from '../types/grinders'
-import { pourDate, type TastingEntry } from '../types/tasting'
+import { BEVERAGES, type BeverageType, pourDate, type TastingEntry } from '../types/tasting'
 
 /**
- * One row per pour, flattened to exactly what the dashboard plots.
+ * One row per pour, flattened to exactly what the dashboard plots. Coffee and beer share one
+ * shape so every chart can mix or filter them; fields the other beverage lacks are `null`.
  *
  * The whole fact table is sent to the client so every filter and breakdown is an
  * instant in-memory regroup rather than a round trip — the point of a drill-down
- * is that following a hunch costs nothing. At ~20 small fields per pour this stays
+ * is that following a hunch costs nothing. At ~25 small fields per pour this stays
  * a few hundred KB even for a heavy multi-year logger.
  */
 export interface PourFact {
 	id: string
-	/** `YYYY-MM-DD`, the brew date where known — see {@link pourDate}. */
+	beverage: BeverageType
+	/** `YYYY-MM-DD`, the brew or tasted date where known — see {@link pourDate}. */
 	date: string
-	roaster: string | null
+	/** Roaster (coffee) or brewery (beer). */
+	producer: string | null
 	productName: string | null
 	country: string | null
 	region: string | null
@@ -32,6 +36,12 @@ export interface PourFact {
 	/** Water grams per gram of coffee. */
 	ratio: number | null
 	brewTimeSeconds: number | null
+	style: string | null
+	styleFamily: string | null
+	serving: string | null
+	abv: number | null
+	hops: string[]
+	ingredients: string[]
 	location: string | null
 	/** Mean of the evaluative sub-ratings, 1–5. */
 	quality: number | null
@@ -40,54 +50,136 @@ export interface PourFact {
 	/** The taster's direct 1–10 judgment. */
 	overall: number | null
 	wouldBuyAgain: boolean | null
-	roasterNotes: string[]
+	/** What the roaster or brewery printed on the label. */
+	producerNotes: string[]
 	tasterNotes: string[]
-	/** The five descriptive axes, for profile comparison. */
-	profile: {
-		aroma: number | null
-		acidity: number | null
-		body: number | null
-		texture: number | null
-		finish: number | null
-	}
+	/** The beverage's descriptive axes ({@link PROFILE_AXES}), keyed by axis label. */
+	profile: Record<string, number | null>
+}
+
+/** The descriptive sub-ratings each beverage's flavor profile is drawn from. */
+export const PROFILE_AXES: Record<BeverageType, readonly { label: string; field: string }[]> = {
+	coffee: [
+		{ label: 'Aroma', field: 'aromaIntensity' },
+		{ label: 'Acidity', field: 'acidityIntensity' },
+		{ label: 'Body', field: 'bodyWeight' },
+		{ label: 'Texture', field: 'bodyTactile' },
+		{ label: 'Finish', field: 'finishLength' }
+	],
+	beer: [
+		{ label: 'Aroma', field: 'aromaIntensity' },
+		{ label: 'Malt', field: 'maltiness' },
+		{ label: 'Hops', field: 'hopIntensity' },
+		{ label: 'Bitterness', field: 'bitterness' },
+		{ label: 'Body', field: 'bodyWeight' },
+		{ label: 'Carbonation', field: 'carbonation' }
+	]
 }
 
 const MS_PER_DAY = 86_400_000
 
-export function toPourFact(entry: TastingEntry): PourFact {
-	const details = entry.details
-	const notes = entry.notes
-	const date = pourDate(entry)
+type BeverageFields = Omit<
+	PourFact,
+	| 'id'
+	| 'beverage'
+	| 'date'
+	| 'location'
+	| 'quality'
+	| 'intensity'
+	| 'overall'
+	| 'wouldBuyAgain'
+	| 'tasterNotes'
+	| 'profile'
+>
+
+const NO_BEVERAGE_FIELDS: BeverageFields = {
+	producer: null,
+	productName: null,
+	country: null,
+	region: null,
+	process: null,
+	brewMethod: null,
+	grindSize: null,
+	grindRank: null,
+	grindSetting: null,
+	roastLevel: null,
+	roastBand: null,
+	daysOffRoast: null,
+	ratio: null,
+	brewTimeSeconds: null,
+	style: null,
+	styleFamily: null,
+	serving: null,
+	abv: null,
+	hops: [],
+	ingredients: [],
+	producerNotes: []
+}
+
+function beverageFields(entry: TastingEntry): BeverageFields {
+	if (entry.beverageType === 'beer') {
+		const beer = entry.details
+		return {
+			...NO_BEVERAGE_FIELDS,
+			producer: beer?.brewery ?? null,
+			productName: beer?.productName ?? null,
+			style: beer?.style ?? null,
+			styleFamily: beer?.styleFamily ?? null,
+			serving: beer?.serving ?? null,
+			abv: beer?.abv ?? null,
+			hops: beer?.hops ?? [],
+			ingredients: beer?.ingredients ?? [],
+			producerNotes: beer?.breweryNotes ?? []
+		}
+	}
+	const coffee = entry.details
 
 	let daysOffRoast: number | null = null
-	if (details?.roastDate && details?.brewDate) {
-		const delta = Date.parse(details.brewDate) - Date.parse(details.roastDate)
+	if (coffee?.roastDate && coffee?.brewDate) {
+		const delta = Date.parse(coffee.brewDate) - Date.parse(coffee.roastDate)
 		if (Number.isFinite(delta) && delta >= 0) daysOffRoast = Math.round(delta / MS_PER_DAY)
 	}
 
 	return {
-		id: entry.entryId,
-		date,
-		roaster: details?.roaster ?? null,
-		productName: details?.productName ?? null,
-		country: details?.country ?? null,
-		region: details?.region ?? null,
-		process: details?.process ?? null,
-		brewMethod: details?.brewMethod ?? null,
-		grindSize: details?.grindSize ?? null,
-		grindRank: grindRank(details?.grindSize),
+		...NO_BEVERAGE_FIELDS,
+		producer: coffee?.roaster ?? null,
+		productName: coffee?.productName ?? null,
+		country: coffee?.country ?? null,
+		region: coffee?.region ?? null,
+		process: coffee?.process ?? null,
+		brewMethod: coffee?.brewMethod ?? null,
+		grindSize: coffee?.grindSize ?? null,
+		grindRank: grindRank(coffee?.grindSize),
 		grindSetting:
-			details?.grinder && details.grinder in GRINDERS && details.grindSetting !== undefined
-				? formatGrindSetting(details.grinder as GrinderId, details.grindSetting)
+			coffee?.grinder && coffee.grinder in GRINDERS && coffee.grindSetting !== undefined
+				? formatGrindSetting(coffee.grinder as GrinderId, coffee.grindSetting)
 				: null,
-		roastLevel: details?.roastLevel ?? null,
-		roastBand: details?.roastLevel !== undefined ? roastBand(details.roastLevel) : null,
+		roastLevel: coffee?.roastLevel ?? null,
+		roastBand: coffee?.roastLevel !== undefined ? roastBand(coffee.roastLevel) : null,
 		daysOffRoast,
 		ratio:
-			details?.coffeeGrams && details?.waterGrams
-				? Math.round((details.waterGrams / details.coffeeGrams) * 10) / 10
+			coffee?.coffeeGrams && coffee?.waterGrams
+				? Math.round((coffee.waterGrams / coffee.coffeeGrams) * 10) / 10
 				: null,
-		brewTimeSeconds: details?.brewTimeSeconds ?? null,
+		brewTimeSeconds: coffee?.brewTimeSeconds ?? null,
+		producerNotes: coffee?.roasterNotes ?? []
+	}
+}
+
+export function toPourFact(entry: TastingEntry): PourFact {
+	const details = entry.details
+	const notes = entry.notes as Record<string, unknown> | undefined
+	const profile: Record<string, number | null> = {}
+	for (const { label, field } of PROFILE_AXES[entry.beverageType]) {
+		const value = notes?.[field]
+		profile[label] = typeof value === 'number' ? value : null
+	}
+
+	return {
+		id: entry.entryId,
+		beverage: entry.beverageType,
+		date: pourDate(entry),
+		...beverageFields(entry),
 		location:
 			details?.location === 'out'
 				? (details.locationName ?? 'Out and about')
@@ -96,17 +188,10 @@ export function toPourFact(entry: TastingEntry): PourFact {
 					: null,
 		quality: entry.qualityScore ?? null,
 		intensity: entry.intensityScore ?? null,
-		overall: notes?.overallRating ?? null,
-		wouldBuyAgain: notes?.wouldBuyAgain ?? null,
-		roasterNotes: details?.roasterNotes ?? [],
-		tasterNotes: notes?.tasterNotes ?? [],
-		profile: {
-			aroma: notes?.aromaIntensity ?? null,
-			acidity: notes?.acidityIntensity ?? null,
-			body: notes?.bodyWeight ?? null,
-			texture: notes?.bodyTactile ?? null,
-			finish: notes?.finishLength ?? null
-		}
+		overall: entry.notes?.overallRating ?? null,
+		wouldBuyAgain: entry.notes?.wouldBuyAgain ?? null,
+		tasterNotes: entry.notes?.tasterNotes ?? [],
+		profile
 	}
 }
 
@@ -115,12 +200,16 @@ export function toPourFact(entry: TastingEntry): PourFact {
 /* -------------------------------------------------------------------------- */
 
 export type DimensionId =
+	| 'beverage'
 	| 'brewMethod'
 	| 'grindSize'
 	| 'country'
 	| 'process'
 	| 'roastBand'
-	| 'roaster'
+	| 'producer'
+	| 'styleFamily'
+	| 'style'
+	| 'serving'
 	| 'location'
 
 export interface Dimension {
@@ -134,6 +223,12 @@ export interface Dimension {
 }
 
 export const DIMENSIONS: Record<DimensionId, Dimension> = {
+	beverage: {
+		id: 'beverage',
+		label: 'Beverage',
+		value: (f) => (f.beverage === 'beer' ? 'Beer' : 'Coffee'),
+		order: (f) => BEVERAGES.indexOf(f.beverage)
+	},
 	brewMethod: { id: 'brewMethod', label: 'Brew Method', value: (f) => f.brewMethod },
 	grindSize: {
 		id: 'grindSize',
@@ -149,7 +244,20 @@ export const DIMENSIONS: Record<DimensionId, Dimension> = {
 		value: (f) => f.roastBand,
 		order: (f) => (f.roastBand ? ROAST_BANDS.indexOf(f.roastBand as 'Light') : -1)
 	},
-	roaster: { id: 'roaster', label: 'Roaster', value: (f) => f.roaster },
+	producer: { id: 'producer', label: 'Roaster / Brewery', value: (f) => f.producer },
+	styleFamily: {
+		id: 'styleFamily',
+		label: 'Beer Style',
+		value: (f) => f.styleFamily,
+		order: (f) => (f.styleFamily ? BEER_STYLE_FAMILIES.indexOf(f.styleFamily as 'IPA') : -1)
+	},
+	style: { id: 'style', label: 'Style', value: (f) => f.style },
+	serving: {
+		id: 'serving',
+		label: 'Serving',
+		value: (f) => f.serving,
+		order: (f) => (f.serving ? SERVINGS.indexOf(f.serving as 'Draft') : -1)
+	},
 	location: { id: 'location', label: 'Where', value: (f) => f.location }
 }
 
@@ -178,7 +286,7 @@ export const METRICS: Record<MetricId, Metric> = {
 		id: 'quality',
 		label: 'Quality',
 		description:
-			'Average of the evaluative sub-ratings — clarity, complexity, sweetness, acidity quality and finish. Excludes intensity, which measures loudness rather than merit.',
+			'Mean of the evaluative sub-ratings, 1–5 (coffee: clarity, complexity, sweetness, acidity quality, finish; beer: appearance, aroma quality, balance, finish quality).',
 		domain: [0, 5],
 		value: (f) => f.quality,
 		format: (v) => v.toFixed(2)
@@ -186,7 +294,7 @@ export const METRICS: Record<MetricId, Metric> = {
 	overall: {
 		id: 'overall',
 		label: 'Overall Rating',
-		description: 'Your direct 1–10 gut judgment of the cup.',
+		description: 'Your direct 1–10 gut judgment.',
 		domain: [0, 10],
 		value: (f) => f.overall,
 		format: (v) => v.toFixed(1)
@@ -194,8 +302,7 @@ export const METRICS: Record<MetricId, Metric> = {
 	intensity: {
 		id: 'intensity',
 		label: 'Intensity',
-		description:
-			'Average of the descriptive sub-ratings — aroma, acidity, body, texture and finish length. How loud the cup is, not how good.',
+		description: 'Mean of the descriptive sub-ratings, 1–5 — how bold it is, not how good.',
 		domain: [0, 5],
 		value: (f) => f.intensity,
 		format: (v) => v.toFixed(2)
@@ -319,19 +426,50 @@ export function monthlyTrend(
 		}))
 }
 
-/** Mean of each descriptive axis — the profile shape of a selection. */
-export function profileOf(facts: PourFact[]): { axis: string; value: number }[] {
-	const axes = [
-		['Aroma', 'aroma'],
-		['Acidity', 'acidity'],
-		['Body', 'body'],
-		['Texture', 'texture'],
-		['Finish', 'finish']
-	] as const
+/**
+ * Groups by hop, where a pour counts once for every hop it was in — so `groupBy`, which gives
+ * each pour one value, can't do it. Reduces like `groupBy` (count when `metric` has no per-pour
+ * value) and returns the `limit` most-used hops.
+ */
+export function hopsBy(facts: PourFact[], metric: Metric, limit = 10): Group[] {
+	const buckets = new Map<string, { values: number[]; count: number }>()
+	for (const fact of facts) {
+		const value = metric.value?.(fact)
+		for (const hop of fact.hops) {
+			let bucket = buckets.get(hop)
+			if (!bucket) {
+				bucket = { values: [], count: 0 }
+				buckets.set(hop, bucket)
+			}
+			bucket.count++
+			if (value !== null && value !== undefined) bucket.values.push(value)
+		}
+	}
+	return [...buckets]
+		.map(([name, bucket]) => ({
+			name,
+			count: bucket.count,
+			value:
+				metric.value === null
+					? bucket.count
+					: bucket.values.length === 0
+						? null
+						: bucket.values.reduce((sum, v) => sum + v, 0) / bucket.values.length
+		}))
+		.sort((a, b) => b.count - a.count || (a.name < b.name ? -1 : 1))
+		.slice(0, limit)
+}
 
-	return axes.map(([label, key]) => {
-		const values = facts
-			.map((fact) => fact.profile[key])
+/** Mean of each of `beverage`'s descriptive axes over that beverage's pours — the profile
+ *  shape of a selection. Other beverages are skipped: coffee's "Body" isn't beer's. */
+export function profileOf(
+	facts: PourFact[],
+	beverage: BeverageType
+): { axis: string; value: number }[] {
+	const own = facts.filter((fact) => fact.beverage === beverage)
+	return PROFILE_AXES[beverage].map(({ label }) => {
+		const values = own
+			.map((fact) => fact.profile[label] ?? null)
 			.filter((value): value is number => value !== null)
 		return {
 			axis: label,
@@ -342,29 +480,29 @@ export function profileOf(facts: PourFact[]): { axis: string; value: number }[] 
 
 export interface NoteComparison {
 	note: string
-	/** How many pours the roaster promised this note on. */
-	bag: number
+	/** How many pours the roaster or brewery printed this note for. */
+	label: number
 	/** How many pours you actually tasted it in. */
 	you: number
 }
 
 /**
  * Flavor notes ranked by how often they appear, split by who claimed them.
- * The gap is the interesting part — notes the bag promises that you never taste,
- * and notes you find that no roaster mentions.
+ * The gap is the interesting part — notes the label promises that you never taste,
+ * and notes you find that no roaster or brewery mentions.
  */
 export function compareNotes(facts: PourFact[], limit = 8): NoteComparison[] {
 	const counts = new Map<string, NoteComparison>()
-	const bump = (note: string, key: 'bag' | 'you') => {
-		const row = counts.get(note) ?? { note, bag: 0, you: 0 }
+	const bump = (note: string, key: 'label' | 'you') => {
+		const row = counts.get(note) ?? { note, label: 0, you: 0 }
 		row[key]++
 		counts.set(note, row)
 	}
 	for (const fact of facts) {
-		for (const note of fact.roasterNotes) bump(note, 'bag')
+		for (const note of fact.producerNotes) bump(note, 'label')
 		for (const note of fact.tasterNotes) bump(note, 'you')
 	}
-	return [...counts.values()].sort((a, b) => b.bag + b.you - (a.bag + a.you)).slice(0, limit)
+	return [...counts.values()].sort((a, b) => b.label + b.you - (a.label + a.you)).slice(0, limit)
 }
 
 /** Smallest group size worth drawing a conclusion from. Groups below this are

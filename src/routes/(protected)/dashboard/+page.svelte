@@ -1,10 +1,12 @@
 <script lang="ts">
+import { untrack } from 'svelte'
 import { resolve } from '$app/paths'
 import { LoopLink } from '$lib'
 import cheersImage from '$lib/assets/cup-cheers.png'
 import tableLegsImage from '$lib/assets/table-legs.png'
 import AppHeader from '$lib/components/AppHeader.svelte'
 import BreakdownChart from '$lib/components/dashboard/BreakdownChart.svelte'
+import HopChart from '$lib/components/dashboard/HopChart.svelte'
 import NoteGapChart from '$lib/components/dashboard/NoteGapChart.svelte'
 import OriginMap from '$lib/components/dashboard/OriginMap.svelte'
 import PourTable from '$lib/components/dashboard/PourTable.svelte'
@@ -18,6 +20,7 @@ import {
 	type DimensionId,
 	type Filters,
 	groupBy,
+	hopsBy,
 	METRIC_IDS,
 	METRICS,
 	type MetricId,
@@ -31,8 +34,15 @@ const MIN_POURS_FOR_DASHBOARD = 11
 
 let { data }: { data: PageData } = $props()
 
+/** Splits by beverage when the log has both; a beer-only log starts on style. */
+function initialBreakdown(): DimensionId {
+	const beverages = new Set(data.pours.map((fact) => fact.beverage))
+	if (beverages.size > 1) return 'beverage'
+	return beverages.has('beer') ? 'styleFamily' : 'brewMethod'
+}
+
 let filters = $state<Filters>({})
-let breakdown = $state<DimensionId>('brewMethod')
+let breakdown = $state<DimensionId>(untrack(initialBreakdown))
 let metricId = $state<MetricId>('quality')
 
 const metric = $derived(METRICS[metricId])
@@ -40,6 +50,11 @@ const filtered = $derived(applyFilters(data.pours, filters))
 const groups = $derived(groupBy(filtered, DIMENSIONS[breakdown], metric))
 const trend = $derived(monthlyTrend(filtered, metric))
 const findings = $derived(findInsights(data.pours))
+const hasCoffee = $derived(filtered.some((fact) => fact.beverage === 'coffee'))
+const hasHops = $derived(filtered.some((fact) => fact.hops.length > 0))
+const singleBeverage = $derived(
+	new Set(filtered.map((fact) => fact.beverage)).size === 1 ? filtered[0].beverage : null
+)
 
 const activeFilters = $derived(
 	Object.entries(filters).filter(([, value]) => value) as [DimensionId, string][]
@@ -246,41 +261,67 @@ const cardClass = 'border border-gray-200 rounded-lg p-5'
 				</div>
 			</section>
 
-			<section class={cardClass}>
-				<div class="flex items-baseline justify-between gap-4 mb-2">
-					<h3 class="font-semibold">Where your coffee comes from</h3>
-					<span class="text-xs text-gray-400">Click an origin to drill in</span>
-				</div>
-				<OriginMap facts={filtered} {metric} onselect={(country) => drillInto(country, 'country')} />
-			</section>
+			{#if hasCoffee}
+				<section class={cardClass}>
+					<div class="flex items-baseline justify-between gap-4 mb-2">
+						<h3 class="font-semibold">Where your coffee comes from</h3>
+						<span class="text-xs text-gray-400">Click an origin to drill in</span>
+					</div>
+					<OriginMap
+						facts={filtered}
+						{metric}
+						onselect={(country) => drillInto(country, 'country')}
+					/>
+				</section>
+			{/if}
 
 			<section class="grid gap-6 lg:grid-cols-2">
-				<div class={cardClass}>
-					<h3 class="font-semibold mb-2">Roast level vs quality</h3>
-					<RoastQualityScatter facts={filtered} />
-					<p class="text-xs text-gray-500 mt-2">
-						Each point is a pour. Filter to an origin to see whether you actually prefer it light
-						or dark.
-					</p>
-				</div>
+				{#if hasCoffee}
+					<div class={cardClass}>
+						<h3 class="font-semibold mb-2">Roast level vs quality</h3>
+						<RoastQualityScatter facts={filtered} />
+						<p class="text-xs text-gray-500 mt-2">
+							Each point is a pour. Filter to an origin to see whether you actually prefer it light
+							or dark.
+						</p>
+					</div>
+				{/if}
 
-				<div class={cardClass}>
+				<div class="{cardClass} {hasCoffee ? '' : 'lg:col-span-2'}">
 					<h3 class="font-semibold mb-2">{metric.label} over time</h3>
 					<TrendChart points={trend} {metric} />
 				</div>
 			</section>
 
+			{#if hasHops}
+				<section class={cardClass}>
+					<h3 class="font-semibold mb-2">Hops you keep coming back to</h3>
+					<HopChart groups={hopsBy(filtered, metric)} {metric} />
+					<p class="text-xs text-gray-500 mt-2">
+						Each hop counts every pour it was in; bars show the selected measure.
+					</p>
+				</section>
+			{/if}
+
 			<section class="grid gap-6 lg:grid-cols-2">
 				<div class={cardClass}>
-					<h3 class="font-semibold mb-2">Cup profile</h3>
-					<ProfileComparison selection={filtered} baseline={data.pours} />
+					<h3 class="font-semibold mb-2">Flavor profile</h3>
+					{#if singleBeverage}
+						<ProfileComparison
+							selection={filtered}
+							baseline={data.pours}
+							beverage={singleBeverage}
+						/>
+					{:else}
+						<p class="text-sm text-gray-500">Filter to one beverage to compare profiles.</p>
+					{/if}
 				</div>
 
 				<div class={cardClass}>
-					<h3 class="font-semibold mb-2">Your palate vs the bag</h3>
+					<h3 class="font-semibold mb-2">Your palate vs the label</h3>
 					<NoteGapChart facts={filtered} />
 					<p class="text-xs text-gray-500 mt-2">
-						Notes the roaster printed against notes you actually recorded.
+						Notes the roaster or brewery printed against notes you actually recorded.
 					</p>
 				</div>
 			</section>

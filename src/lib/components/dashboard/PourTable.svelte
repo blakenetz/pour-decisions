@@ -29,10 +29,9 @@ function formatTime(seconds: number | null): string {
 					class="text-left text-xs uppercase tracking-widest text-gray-500 border-b border-gray-200"
 				>
 					<th class="py-2 pr-4 font-semibold">Date</th>
-					<th class="py-2 pr-4 font-semibold">Coffee</th>
-					<th class="py-2 pr-4 font-semibold">Origin</th>
-					<th class="py-2 pr-4 font-semibold">Method</th>
-					<th class="py-2 pr-4 font-semibold">Grind</th>
+					<th class="py-2 pr-4 font-semibold">Name</th>
+					<th class="py-2 pr-4 font-semibold">Details</th>
+					<th class="py-2 pr-4 font-semibold">Prep</th>
 					<th class="py-2 pr-4 font-semibold">Time</th>
 					<th class="py-2 pr-4 font-semibold text-right">Quality</th>
 					<th class="py-2 font-semibold text-right">Rating</th>
@@ -44,24 +43,37 @@ function formatTime(seconds: number | null): string {
 						<td class="py-2 pr-4 text-gray-500 whitespace-nowrap">{pour.date}</td>
 						<td class="py-2 pr-4">
 							<span class="block">{pour.productName ?? '—'}</span>
-							<span class="block text-xs text-gray-500">{pour.roaster ?? '—'}</span>
+							<span class="block text-xs text-gray-500">{pour.producer ?? '—'}</span>
 						</td>
-						<td class="py-2 pr-4">
-							<span class="block">{pour.country ?? '—'}</span>
-							<span class="block text-xs text-gray-500">
-								{[pour.region, pour.process].filter(Boolean).join(' · ') || '—'}
-							</span>
-						</td>
-						<td class="py-2 pr-4">{pour.brewMethod ?? '—'}</td>
-						<td class="py-2 pr-4">
-							{#if pour.grindSetting}
-								<span class="block whitespace-nowrap">{pour.grindSetting}</span>
-								<span class="block text-xs text-gray-500">{pour.grindSize ?? '—'}</span>
-							{:else}
-								{pour.grindSize ?? '—'}
-							{/if}
-						</td>
-						<td class="py-2 pr-4 tabular-nums">{formatTime(pour.brewTimeSeconds)}</td>
+						{#if pour.beverage === 'beer'}
+							<td class="py-2 pr-4">
+								<span class="block">{pour.style ?? '—'}</span>
+								<span class="block text-xs text-gray-500">
+									{[pour.abv && `${pour.abv}%`, pour.styleFamily].filter(Boolean).join(' · ') ||
+										'—'}
+								</span>
+							</td>
+							<td class="py-2 pr-4">{pour.serving ?? '—'}</td>
+							<td class="py-2 pr-4 tabular-nums">—</td>
+						{:else}
+							<td class="py-2 pr-4">
+								<span class="block">{pour.country ?? '—'}</span>
+								<span class="block text-xs text-gray-500">
+									{[pour.region, pour.process].filter(Boolean).join(' · ') || '—'}
+								</span>
+							</td>
+							<td class="py-2 pr-4">
+								<span class="block">{pour.brewMethod ?? '—'}</span>
+								{#if pour.grindSetting}
+									<span class="block text-xs text-gray-500 whitespace-nowrap">
+										{pour.grindSetting} · {pour.grindSize ?? '—'}
+									</span>
+								{:else if pour.grindSize}
+									<span class="block text-xs text-gray-500">{pour.grindSize}</span>
+								{/if}
+							</td>
+							<td class="py-2 pr-4 tabular-nums">{formatTime(pour.brewTimeSeconds)}</td>
+						{/if}
 						<td class="py-2 pr-4 text-right tabular-nums">
 							{pour.quality !== null ? pour.quality.toFixed(2) : '—'}
 						</td>
