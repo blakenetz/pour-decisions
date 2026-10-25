@@ -47,17 +47,25 @@ const MIN_EFFECT = 0.25
  * Scans the fact table for the largest real differences in quality and phrases
  * them as sentences, strongest first.
  *
- * Two passes: whole-collection contrasts ("Pour Over beats French Press"), then
- * within-origin roast contrasts ("for Ethiopia, Light beats Dark") — the second
- * is what makes an origin-specific preference visible at all, since averaging
- * across every origin cancels opposing preferences out.
+ * Whole-collection contrasts first ("Pour Over beats French Press", "IPA is your best beer
+ * style"), then within-slice ones: roast per origin ("for Ethiopia, Light beats Dark") and
+ * grind per brew method. The slices are what make an origin-specific preference visible at
+ * all, since averaging across every origin cancels opposing preferences out. They only ever
+ * cut coffee, since beer pours have no origin or brew method.
  */
 export function findInsights(facts: PourFact[], limit = 4): Finding[] {
 	const findings: Finding[] = []
 	// Grind is deliberately absent here: the right grind for espresso is the wrong
 	// grind for cold brew, so a collection-wide grind ranking just restates which
 	// methods you brew most. It's only meaningful inside a method — see below.
-	for (const id of ['brewMethod', 'process', 'roastBand', 'roaster'] as const) {
+	for (const id of [
+		'brewMethod',
+		'process',
+		'roastBand',
+		'producer',
+		'styleFamily',
+		'serving'
+	] as const) {
 		const result = contrast(facts, id)
 		if (!result) continue
 		const effect = result.best.value - result.worst.value

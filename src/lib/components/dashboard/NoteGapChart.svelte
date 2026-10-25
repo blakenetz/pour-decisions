@@ -8,7 +8,7 @@ const rows = $derived(compareNotes(facts))
 
 const data = $derived(
 	rows.flatMap((row) => [
-		{ note: row.note, series: 'On the bag', value: row.bag },
+		{ note: row.note, series: 'On the label', value: row.label },
 		{ note: row.note, series: 'You tasted', value: row.you }
 	])
 )
@@ -22,7 +22,7 @@ const height = $derived(Math.max(200, rows.length * 44 + 40) + LEGEND_SPACE)
 {#if rows.length === 0}
 	<p class="text-sm text-gray-400 py-8">
 		No flavor notes logged yet — add your own notes when logging a pour to compare them against the
-		roaster's.
+		roaster's or brewery's.
 	</p>
 {:else}
 	<BarChart

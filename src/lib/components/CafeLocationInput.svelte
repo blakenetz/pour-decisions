@@ -22,7 +22,7 @@ import ClearButton from './ClearButton.svelte'
 const PHOTON_URL = 'https://photon.komoot.io/api/'
 
 /** OSM `key:value` tags Photon should restrict results to — named commercial
- *  venues where you'd plausibly drink coffee. */
+ *  venues where you'd plausibly drink coffee or beer. */
 const VENUE_TAGS = [
 	'amenity:cafe',
 	'amenity:restaurant',
@@ -33,7 +33,9 @@ const VENUE_TAGS = [
 	'shop:tea',
 	'shop:bakery',
 	'shop:pastry',
-	'shop:deli'
+	'shop:deli',
+	'craft:brewery',
+	'amenity:biergarten'
 ]
 
 const MIN_QUERY_LENGTH = 3
@@ -100,7 +102,12 @@ function toSuggestion(feature: PhotonFeature): Suggestion | null {
 
 	const [featLng, featLat] = feature.geometry.coordinates
 	const regionLine = [p.postcode, p.city].filter(Boolean).join(' ')
-	const address = [[p.housenumber, p.street].filter(Boolean).join(' '), regionLine, p.state, p.country]
+	const address = [
+		[p.housenumber, p.street].filter(Boolean).join(' '),
+		regionLine,
+		p.state,
+		p.country
+	]
 		.filter(Boolean)
 		.join(', ')
 
@@ -249,7 +256,7 @@ $effect(() => {
 					if (suggestions.length > 0) open = true
 				}}
 				onblur={handleBlur}
-				placeholder="Search cafes, e.g. Blue Bottle Coffee"
+				placeholder="Search cafes, bars, breweries"
 				class="w-full border-b border-dark-ink bg-transparent py-2 pr-10 focus:outline-none placeholder:text-gray-300"
 			/>
 			<!-- Inside the field's right edge, so the input keeps the full width of the fields above. -->
