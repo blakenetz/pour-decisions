@@ -1,7 +1,7 @@
 {
 	"id": "/",
 	"name": "Pour Decisions",
-	"short_name": "Pour",
+	"short_name": "Pour Decisions",
 	"description": "Track your coffee tastings and learn what you actually like.",
 	"start_url": "/",
 	"scope": "/",
