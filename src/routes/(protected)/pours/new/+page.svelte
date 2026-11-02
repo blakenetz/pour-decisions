@@ -1,4 +1,5 @@
 <script lang="ts">
+import { untrack } from 'svelte'
 import { enhance } from '$app/forms'
 import { resolve } from '$app/paths'
 import { Flowers, RatingRow } from '$lib'
@@ -8,9 +9,10 @@ import CafeLocationInput from '$lib/components/CafeLocationInput.svelte'
 import ChoicePills from '$lib/components/ChoicePills.svelte'
 import FormSection from '$lib/components/FormSection.svelte'
 import GrindInput from '$lib/components/GrindInput.svelte'
-import PastCoffeeInput from '$lib/components/PastCoffeeInput.svelte'
+import PastProductInput from '$lib/components/PastProductInput.svelte'
 import TagInput from '$lib/components/TagInput.svelte'
-import type { PastCoffee, PastVenue } from '$lib/past-pours'
+import type { PastProduct, PastVenue } from '$lib/past-pours'
+import { BEER_FLAVOR_NOTES, BEER_INGREDIENTS, HOPS } from '$lib/types/beer'
 import {
 	BREW_METHODS,
 	BREWED_DRINKS,
@@ -21,8 +23,17 @@ import {
 	PROCESSES
 } from '$lib/types/coffee'
 import type { GrinderId } from '$lib/types/grinders'
-import type { TastingDetails } from '$lib/types/tasting'
+import type {
+	BeerDetails,
+	BeverageType,
+	CoffeeDetails,
+	CoffeeNotes,
+	PourLocationFields
+} from '$lib/types/tasting'
 import type { ActionData, PageData } from './$types'
+import BeerEssentials from './BeerEssentials.svelte'
+import BeerSections from './BeerSections.svelte'
+import { BeerDraft } from './beer-draft.svelte'
 
 let { data, form }: { data: PageData; form: ActionData } = $props()
 
@@ -31,6 +42,11 @@ let { data, form }: { data: PageData; form: ActionData } = $props()
 const defaults = $derived(data.defaults)
 const hasDefaults = $derived(Object.values(defaults).some((value) => value !== undefined))
 let defaultsApplied = $state(false)
+
+// Starts on whatever the taster logged last. Each beverage renders only its own fields, so the
+// hidden one's state never posts.
+let beverage = $state<BeverageType>(untrack(() => data.defaultBeverage))
+const beer = new BeerDraft()
 
 // Required up-front fields are bound so we can validate before submitting.
 let productName = $state('')
@@ -49,8 +65,9 @@ let roastDate = $state('')
 let roasterNotes: string[] = $state([])
 let tasterNotes: string[] = $state([])
 let coffeeOpen = $state(false)
-// Where the last fill came from, for the "Filled from your pour on …" note.
-let filledFrom: { brewed: string; roastDate?: string } | null = $state(null)
+// Where the last fill came from, for the "Filled from your pour on …" note. `freshnessDate` is the
+// roast (coffee) or packaged (beer) date that came with it, which a new bag or batch changes.
+let filledFrom: { brewed: string; freshnessDate?: string } | null = $state(null)
 let fragranceIntensity = $state(0)
 let aromaIntensity = $state(0)
 let aromaClarity = $state(0)
@@ -83,7 +100,7 @@ let cafeSeed: PastVenue | undefined = $state(undefined)
 let cafeVersion = $state(0)
 
 type BrewSetup = Pick<
-	TastingDetails,
+	CoffeeDetails,
 	| 'brewMethod'
 	| 'location'
 	| 'grinder'
@@ -96,7 +113,7 @@ type BrewSetup = Pick<
 >
 
 type CoffeeFields = Pick<
-	TastingDetails,
+	CoffeeDetails,
 	| 'roaster'
 	| 'productName'
 	| 'country'
@@ -145,16 +162,9 @@ function applyDefaults() {
 	defaultsApplied = true
 }
 
-/** "Last setup": the coffee, drink and whole setup from the most recent pour. Ratings and notes
- *  belong to the new cup and the brew date is today's, so those are never copied. */
-function repeatLastSetup() {
-	const last = data.lastPour
-	if (!last) return
-	const details = last.details
-	fillCoffee(details)
-	// Set directly rather than through selectDrinkStyle, which would overwrite the saved method.
-	if (details.drinkStyle) drinkStyle = details.drinkStyle
-	fillBrewSetup(details)
+/** Fills where the pour happened, reseeding the cafe search with the saved venue. */
+function fillWhere(details: PourLocationFields) {
+	if (details.location) location = details.location
 	if (details.location === 'out' && details.locationName) {
 		cafeSeed = {
 			name: details.locationName,
@@ -164,7 +174,26 @@ function repeatLastSetup() {
 		}
 		cafeVersion += 1
 	}
-	filledFrom = { brewed: last.brewed, roastDate: details.roastDate }
+}
+
+/** "Last setup": the coffee or beer and its whole setup from the most recent pour of this
+ *  beverage. Ratings and notes belong to the new pour and its date is today's, so those are
+ *  never copied. */
+function repeatLastSetup() {
+	const last = data.lastPours[beverage]
+	if (!last) return
+	if (last.beverageType === 'beer') {
+		beer.fillSetup(last.details)
+		filledFrom = { brewed: last.brewed, freshnessDate: last.details.packagedDate }
+	} else {
+		const details = last.details
+		fillCoffee(details)
+		// Set directly rather than through selectDrinkStyle, which would overwrite the saved method.
+		if (details.drinkStyle) drinkStyle = details.drinkStyle
+		fillBrewSetup(details)
+		filledFrom = { brewed: last.brewed, freshnessDate: details.roastDate }
+	}
+	fillWhere(last.details)
 }
 
 // Free-text notes are bound so "Last entry" can fill them.
@@ -181,13 +210,27 @@ let fragranceOpen = $state(false)
 let tasteOpen = $state(false)
 let thoughtsOpen = $state(false)
 
-/** "Last entry": a full copy of the most recent pour, ratings and notes included, for logging
- *  another cup that went the same way. Only the brew date stays today's. */
+/** "Last entry": a full copy of the most recent pour of this beverage, ratings and notes
+ *  included, for logging another one that went the same way. Only the date stays today's. */
 function copyLastEntry() {
-	const notes = data.lastPour?.notes
+	const last = data.lastPours[beverage]
 	repeatLastSetup()
-	if (!notes) return
+	const notes = last?.notes
+	if (!last || !notes) return
 	if (notes.overallRating !== undefined) overallRating = notes.overallRating
+	if (notes.wouldBuyAgain !== undefined) wouldBuyAgain = notes.wouldBuyAgain ? 'yes' : 'no'
+	if (notes.tasterNotes) tasterNotes = [...notes.tasterNotes]
+	if (notes.freeText) noteText.freeText = notes.freeText
+	if (last.beverageType === 'beer') {
+		if (last.notes) beer.fillNotes(last.notes)
+	} else if (last.notes) {
+		fillCoffeeNotes(last.notes)
+	}
+	thoughtsOpen = true
+}
+
+/** The coffee-only ratings and notes from "Last entry". */
+function fillCoffeeNotes(notes: CoffeeNotes) {
 	if (notes.fragranceIntensity !== undefined) fragranceIntensity = notes.fragranceIntensity
 	if (notes.aromaIntensity !== undefined) aromaIntensity = notes.aromaIntensity
 	if (notes.aromaClarity !== undefined) aromaClarity = notes.aromaClarity
@@ -199,15 +242,20 @@ function copyLastEntry() {
 	if (notes.bodyTactile !== undefined) bodyTactile = notes.bodyTactile
 	if (notes.finishFlavor !== undefined) finishFlavor = notes.finishFlavor
 	if (notes.finishLength !== undefined) finishLength = notes.finishLength
-	if (notes.wouldBuyAgain !== undefined) wouldBuyAgain = notes.wouldBuyAgain ? 'yes' : 'no'
-	if (notes.tasterNotes) tasterNotes = [...notes.tasterNotes]
 	for (const key of Object.keys(noteText) as (keyof typeof noteText)[]) {
 		const text = notes[key]
 		if (text) noteText[key] = text
 	}
 	fragranceOpen = true
 	tasteOpen = true
-	thoughtsOpen = true
+}
+
+/** Tasting tags and the fill note belong to one beverage; the rest of the shared fields carry. */
+function selectBeverage(next: BeverageType) {
+	if (next === beverage) return
+	beverage = next
+	filledFrom = null
+	tasterNotes = []
 }
 
 /** Fills Brew Method from the drink when the drink implies one (a latte starts as espresso).
@@ -220,13 +268,27 @@ function selectDrinkStyle(next: string) {
 }
 
 /** Picking a past coffee fills only the coffee: brew setup and ratings belong to this cup. */
-function fillFromPast(coffee: PastCoffee) {
-	fillCoffee(coffee)
-	filledFrom = { brewed: coffee.lastBrewed, roastDate: coffee.roastDate }
+function fillFromPast(product: PastProduct) {
+	const details = product.details as CoffeeDetails
+	fillCoffee(details)
+	filledFrom = { brewed: product.lastBrewed, freshnessDate: details.roastDate }
 }
 
-// The taster's own vocabulary first, so their spelling of a note wins over the stock list.
-const noteSuggestions = $derived([...new Set([...data.pastNotes, ...FLAVOR_NOTES])])
+/** Picking a past beer fills only the beer: serving and ratings belong to this pour. */
+function fillBeerFromPast(product: PastProduct) {
+	const details = product.details as BeerDetails
+	beer.fillProduct(details)
+	filledFrom = { brewed: product.lastBrewed, freshnessDate: details.packagedDate }
+}
+
+// The taster's own vocabulary first, so their spelling of a tag wins over the stock list.
+const noteSuggestions = $derived(
+	beverage === 'beer'
+		? [...new Set([...data.pastNotes.beer, ...BEER_FLAVOR_NOTES])]
+		: [...new Set([...data.pastNotes.coffee, ...FLAVOR_NOTES])]
+)
+const hopSuggestions = $derived([...new Set([...data.pastHops, ...HOPS])])
+const ingredientSuggestions = $derived([...new Set([...data.pastIngredients, ...BEER_INGREDIENTS])])
 const dayFormatter = new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric' })
 
 const listFormatter = new Intl.ListFormat('en', { style: 'long', type: 'conjunction' })
@@ -248,11 +310,28 @@ const LOCATION_OPTIONS = [
 	{ value: 'home', label: 'Home' },
 	{ value: 'out', label: 'Out' }
 ]
+const BEVERAGE_OPTIONS = [
+	{ value: 'coffee', label: 'Coffee' },
+	{ value: 'beer', label: 'Beer' }
+]
 const BUY_AGAIN_OPTIONS = [
 	{ value: 'yes', label: 'Yes' },
 	{ value: 'no', label: 'No' }
 ]
 </script>
+
+{#snippet filledNote()}
+	{#if filledFrom}
+		<p class="text-xs text-gray-500 mt-1" role="status">
+			Filled from your pour on {dayFormatter.format(new Date(`${filledFrom.brewed}T00:00`))}.
+			{#if filledFrom.freshnessDate}
+				{beverage === 'beer'
+					? 'New batch? Update the packaged date under Beer Details.'
+					: 'New bag? Update the roast date under Brew.'}
+			{/if}
+		</p>
+	{/if}
+{/snippet}
 
 <Flowers />
 <section class="flex flex-col items-center min-h-[100dvh] px-4 pt-4 w-full max-w-6xl mx-auto">
@@ -263,8 +342,13 @@ const BUY_AGAIN_OPTIONS = [
 		use:enhance={({ cancel }) => {
 			const missing: string[] = []
 			if (overallRating === 0) missing.push('an overall rating')
-			if (!roaster.trim() && !productName.trim()) missing.push('a roaster or coffee name')
-			if (!brewMethod) missing.push('a brew method')
+			if (beverage === 'beer') {
+				if (!beer.brewery.trim() && !beer.productName.trim()) missing.push('a brewery or beer name')
+				if (!beer.style.trim()) missing.push('a style')
+			} else {
+				if (!roaster.trim() && !productName.trim()) missing.push('a roaster or coffee name')
+				if (!brewMethod) missing.push('a brew method')
+			}
 			if (missing.length > 0) {
 				clientError = `Please add ${listFormatter.format(missing)}.`
 				cancel()
@@ -282,15 +366,25 @@ const BUY_AGAIN_OPTIONS = [
 		<div class="flex flex-col gap-6">
 			<h2 class={sectionHeadingClass}>The Essentials</h2>
 
-			{#if data.lastPour || hasDefaults}
+			<ChoicePills
+				label="Beverage"
+				name="beverageType"
+				options={BEVERAGE_OPTIONS}
+				bind:value={() => beverage, (next) => selectBeverage(next as BeverageType)}
+				inline
+			/>
+
+			{#if data.lastPours[beverage] || (beverage === 'coffee' && hasDefaults)}
 				<div class="flex items-center justify-between gap-2">
 					<span class={labelClass}>Autofill</span>
 					<div class="flex gap-2">
-						{#if data.lastPour}
+						{#if data.lastPours[beverage]}
 							<button
 								type="button"
 								onclick={repeatLastSetup}
-								title="Coffee, drink and brew setup from your last pour"
+								title={beverage === 'beer'
+									? 'Beer and serving from your last beer'
+									: 'Coffee, drink and brew setup from your last coffee'}
 								class={toggleClass}
 							>
 								Last setup
@@ -298,13 +392,13 @@ const BUY_AGAIN_OPTIONS = [
 							<button
 								type="button"
 								onclick={copyLastEntry}
-								title="Everything from your last pour, ratings and notes included"
+								title="Everything from your last {beverage}, ratings and notes included"
 								class={toggleClass}
 							>
 								Last entry
 							</button>
 						{/if}
-						{#if hasDefaults}
+						{#if beverage === 'coffee' && hasDefaults}
 							<button
 								type="button"
 								onclick={applyDefaults}
@@ -316,112 +410,120 @@ const BUY_AGAIN_OPTIONS = [
 						{/if}
 					</div>
 				</div>
-				{#if defaultsApplied}
+				{#if defaultsApplied && beverage === 'coffee'}
 					<p class="-mt-3 text-right text-xs text-gray-500">Brew setup filled in below.</p>
 				{/if}
 			{/if}
-			{#if !hasDefaults}
+			{#if beverage === 'coffee' && !hasDefaults}
 				<p class="text-[10px] text-gray-400 -mt-2">
 					Save your usual brew setup on your
 					<a href={resolve('/profile')} class="underline">profile</a> to fill it here in one tap.
 				</p>
 			{/if}
 
-			<div class="flex flex-col gap-1">
-				<div class={pairClass}>
-					<div class="flex flex-col gap-1">
-						<label for="roaster" class={labelClass}>
-							Roaster<span class="text-red-500"> *</span>
-						</label>
-						<PastCoffeeInput
-							id="roaster"
-							name="roaster"
-							bind:value={roaster}
-							coffees={data.pastCoffees}
-							onpick={fillFromPast}
-							placeholder="e.g. Blue Bottle"
-							{inputClass}
-						/>
-					</div>
-
-					<div class="flex flex-col gap-1">
-						<label for="productName" class={labelClass}>
-							Coffee Name<span class="text-red-500"> *</span>
-						</label>
-						<PastCoffeeInput
-							id="productName"
-							name="productName"
-							bind:value={productName}
-							coffees={data.pastCoffees}
-							onpick={fillFromPast}
-							placeholder="e.g. Yirgacheffe Konga"
-							{inputClass}
-						/>
-					</div>
-				</div>
-				<p class="text-[10px] text-gray-400 mt-1">Only one of these is required.</p>
-				{#if filledFrom}
-					<p class="text-xs text-gray-500 mt-1" role="status">
-						Filled from your pour on {dayFormatter.format(new Date(`${filledFrom.brewed}T00:00`))}.
-						{#if filledFrom.roastDate}New bag? Update the roast date under Brew.{/if}
-					</p>
-				{/if}
-			</div>
-
-			<div class="flex flex-col gap-1">
-				<label for="country" class={labelClass}>Origin</label>
-				<select id="country" name="country" bind:value={country} class={inputClass}>
-					<option value="">Select a country</option>
-					{#each COUNTRIES as option (option)}
-						<option value={option}>{option}</option>
-					{/each}
-				</select>
-			</div>
-
-			<ChoicePills
-				label="Process"
-				name="process"
-				options={PROCESS_OPTIONS}
-				bind:value={beanProcess}
-				clearable
-			/>
-
-			<div class={pairClass}>
+			{#if beverage === 'coffee'}
 				<div class="flex flex-col gap-1">
-					<label for="drinkStyle" class={labelClass}>Style</label>
-					<select
-						id="drinkStyle"
-						name="drinkStyle"
-						bind:value={() => drinkStyle, selectDrinkStyle}
-						class={inputClass}
-					>
-						<option value="">Select a style</option>
-						<optgroup label="Brewed">
-							{#each BREWED_DRINKS as style (style)}
-								<option value={style}>{style}</option>
-							{/each}
-						</optgroup>
-						<optgroup label="Espresso">
-							{#each ESPRESSO_DRINKS as style (style)}
-								<option value={style}>{style}</option>
-							{/each}
-						</optgroup>
-						<option value="Other">Other</option>
-					</select>
+					<div class={pairClass}>
+						<div class="flex flex-col gap-1">
+							<label for="roaster" class={labelClass}>
+								Roaster<span class="text-red-500"> *</span>
+							</label>
+							<PastProductInput
+								id="roaster"
+								name="roaster"
+								bind:value={roaster}
+								products={data.pastProducts.coffee}
+								onpick={fillFromPast}
+								placeholder="e.g. Blue Bottle"
+								{inputClass}
+							/>
+						</div>
+
+						<div class="flex flex-col gap-1">
+							<label for="productName" class={labelClass}>
+								Coffee Name<span class="text-red-500"> *</span>
+							</label>
+							<PastProductInput
+								id="productName"
+								name="productName"
+								bind:value={productName}
+								products={data.pastProducts.coffee}
+								onpick={fillFromPast}
+								placeholder="e.g. Yirgacheffe Konga"
+								{inputClass}
+							/>
+						</div>
+					</div>
+					<p class="text-[10px] text-gray-400 mt-1">Only one of these is required.</p>
+					{@render filledNote()}
 				</div>
 
 				<div class="flex flex-col gap-1">
-					<label for="brewMethod" class={labelClass}>
-						Brew Method<span class="text-red-500"> *</span>
-					</label>
-					<select id="brewMethod" name="brewMethod" bind:value={brewMethod} class={inputClass}>
-						<option value="" disabled>Select a method</option>
-						{#each BREW_METHODS as method (method)}
-							<option value={method}>{method}</option>
+					<label for="country" class={labelClass}>Origin</label>
+					<select id="country" name="country" bind:value={country} class={inputClass}>
+						<option value="">Select a country</option>
+						{#each COUNTRIES as option (option)}
+							<option value={option}>{option}</option>
 						{/each}
 					</select>
 				</div>
-			</div>
+
+				<ChoicePills
+					label="Process"
+					name="process"
+					options={PROCESS_OPTIONS}
+					bind:value={beanProcess}
+					clearable
+				/>
+
+				<div class={pairClass}>
+					<div class="flex flex-col gap-1">
+						<label for="drinkStyle" class={labelClass}>Style</label>
+						<select
+							id="drinkStyle"
+							name="drinkStyle"
+							bind:value={() => drinkStyle, selectDrinkStyle}
+							class={inputClass}
+						>
+							<option value="">Select a style</option>
+							<optgroup label="Brewed">
+								{#each BREWED_DRINKS as style (style)}
+									<option value={style}>{style}</option>
+								{/each}
+							</optgroup>
+							<optgroup label="Espresso">
+								{#each ESPRESSO_DRINKS as style (style)}
+									<option value={style}>{style}</option>
+								{/each}
+							</optgroup>
+							<option value="Other">Other</option>
+						</select>
+					</div>
+
+					<div class="flex flex-col gap-1">
+						<label for="brewMethod" class={labelClass}>
+							Brew Method<span class="text-red-500"> *</span>
+						</label>
+						<select id="brewMethod" name="brewMethod" bind:value={brewMethod} class={inputClass}>
+							<option value="" disabled>Select a method</option>
+							{#each BREW_METHODS as method (method)}
+								<option value={method}>{method}</option>
+							{/each}
+						</select>
+					</div>
+				</div>
+			{:else}
+				<BeerEssentials
+					draft={beer}
+					products={data.pastProducts.beer}
+					customStyles={data.customStyles}
+					onpick={fillBeerFromPast}
+					status={filledNote}
+					{inputClass}
+					{labelClass}
+					{pairClass}
+				/>
+			{/if}
 
 			<div class="flex flex-col gap-3">
 				<ChoicePills
@@ -452,13 +554,15 @@ const BUY_AGAIN_OPTIONS = [
 				</div>
 			</div>
 
-			<div class="flex flex-col gap-3">
-				<RatingRow name="roastLevel" label="Roast Level" bind:value={roastLevel} max={10} />
-				<div class="flex justify-between text-[10px] text-gray-400 uppercase tracking-widest">
-					<span>Light</span>
-					<span>Dark</span>
+			{#if beverage === 'coffee'}
+				<div class="flex flex-col gap-3">
+					<RatingRow name="roastLevel" label="Roast Level" bind:value={roastLevel} max={10} />
+					<div class="flex justify-between text-[10px] text-gray-400 uppercase tracking-widest">
+						<span>Light</span>
+						<span>Dark</span>
+					</div>
 				</div>
-			</div>
+			{/if}
 
 			<ChoicePills
 				label="Would You Buy It Again?"
@@ -470,241 +574,255 @@ const BUY_AGAIN_OPTIONS = [
 		</div>
 
 		<div class="flex flex-col border-b border-gray-200">
-			<FormSection title="Coffee Details" bind:open={coffeeOpen}>
-				<div class="flex flex-col gap-1">
-					<label for="region" class={labelClass}>Region</label>
-					<input
-						id="region"
-						name="region"
-						type="text"
-						placeholder="e.g. Yirgacheffe"
-						bind:value={region}
-						class={inputClass}
-					/>
-				</div>
+			{#if beverage === 'coffee'}
+				<FormSection title="Coffee Details" bind:open={coffeeOpen}>
+					<div class="flex flex-col gap-1">
+						<label for="region" class={labelClass}>Region</label>
+						<input
+							id="region"
+							name="region"
+							type="text"
+							placeholder="e.g. Yirgacheffe"
+							bind:value={region}
+							class={inputClass}
+						/>
+					</div>
 
-				<div class="flex flex-col gap-1">
-					<label for="roasterNotes" class={labelClass}>Roaster's Notes</label>
-					<TagInput
-						id="roasterNotes"
-						name="roasterNotes"
-						bind:tags={roasterNotes}
-						suggestions={noteSuggestions}
-						placeholder="e.g. raspberry, magnolia, vanilla"
+					<div class="flex flex-col gap-1">
+						<label for="roasterNotes" class={labelClass}>Roaster's Notes</label>
+						<TagInput
+							id="roasterNotes"
+							name="roasterNotes"
+							bind:tags={roasterNotes}
+							suggestions={noteSuggestions}
+							placeholder="e.g. raspberry, magnolia, vanilla"
+							{inputClass}
+						/>
+					</div>
+				</FormSection>
+
+				<FormSection title="Brew" bind:open={brewOpen}>
+					<GrindInput
+						bind:grinder
+						bind:grindSize
+						bind:grindSetting
+						sizePlaceholder="Select a size"
 						{inputClass}
+						{labelClass}
 					/>
-				</div>
-			</FormSection>
 
-			<FormSection title="Brew" bind:open={brewOpen}>
-				<GrindInput
-					bind:grinder
-					bind:grindSize
-					bind:grindSetting
-					sizePlaceholder="Select a size"
+					<!-- items-end: a label that wraps on a phone pushes up, not its input down. -->
+					<div class="grid grid-cols-3 items-end gap-6">
+						<div class="flex flex-col gap-1">
+							<label for="coffeeGrams" class={labelClass}>Coffee (g)</label>
+							<input
+								id="coffeeGrams"
+								name="coffeeGrams"
+								type="number"
+								min="0"
+								bind:value={coffeeGrams}
+								class={inputClass}
+							/>
+						</div>
+
+						<div class="flex flex-col gap-1">
+							<label for="waterGrams" class={labelClass}>Water (g)</label>
+							<input
+								id="waterGrams"
+								name="waterGrams"
+								type="number"
+								min="0"
+								bind:value={waterGrams}
+								class={inputClass}
+							/>
+						</div>
+
+						<div class="flex flex-col gap-1">
+							<label for="waterTempF" class={labelClass}>Water Temp (°F)</label>
+							<input
+								id="waterTempF"
+								name="waterTempF"
+								type="number"
+								min="0"
+								bind:value={waterTempF}
+								class={inputClass}
+							/>
+						</div>
+					</div>
+
+					<div class="flex flex-col gap-1">
+						<span class={labelClass}>Brew Time</span>
+						{#key brewTimeVersion}
+							<BrewTimeInput name="brewTimeSeconds" initialSeconds={brewTimeSeed} {inputClass} />
+						{/key}
+					</div>
+
+					<div class="grid grid-cols-2 gap-6">
+						<div class="flex flex-col gap-1">
+							<label for="roastDate" class={labelClass}>Roast Date</label>
+							<input
+								id="roastDate"
+								name="roastDate"
+								type="date"
+								bind:value={roastDate}
+								class={inputClass}
+							/>
+						</div>
+
+						<div class="flex flex-col gap-1">
+							<label for="brewDate" class={labelClass}>Brew Date</label>
+							<input
+								id="brewDate"
+								name="brewDate"
+								type="date"
+								bind:value={brewDate}
+								class={inputClass}
+							/>
+						</div>
+					</div>
+				</FormSection>
+
+				<FormSection title="Fragrance & Aroma" bind:open={fragranceOpen}>
+					<p class="text-xs text-gray-500">
+						Smell it twice: once dry, once brewed. Fragrance often reads sweeter and roastier;
+						aroma is where fruit and florals open up. Note what changes between the two.
+					</p>
+
+					<div class="flex flex-col gap-4">
+						<div class="flex flex-col gap-1">
+							<span class="text-sm font-semibold">Fragrance</span>
+							<span class="text-[10px] text-gray-400">
+								Dry — the ground coffee, before any water touches it.
+							</span>
+						</div>
+						<div class={pairClass}>
+							<RatingRow
+								name="fragranceIntensity"
+								label="Intensity"
+								bind:value={fragranceIntensity}
+							/>
+						</div>
+						<textarea
+							bind:value={noteText.fragranceNotes}
+							name="fragranceNotes"
+							rows="2"
+							placeholder="e.g. brown sugar, cocoa, toasted nuts"
+							class={textareaClass}
+						></textarea>
+					</div>
+
+					<div class="flex flex-col gap-4">
+						<div class="flex flex-col gap-1">
+							<span class="text-sm font-semibold">Aroma</span>
+							<span class="text-[10px] text-gray-400">
+								Wet — the brewed cup, or the grounds as they bloom.
+							</span>
+						</div>
+						<div class={pairClass}>
+							<RatingRow name="aromaIntensity" label="Intensity" bind:value={aromaIntensity} />
+							<RatingRow name="aromaClarity" label="Clarity" bind:value={aromaClarity} />
+						</div>
+						<textarea
+							bind:value={noteText.aromaNotes}
+							name="aromaNotes"
+							rows="2"
+							placeholder="What changed once water hit? e.g. jasmine opened up, cocoa faded"
+							class={textareaClass}
+						></textarea>
+					</div>
+				</FormSection>
+
+				<FormSection title="Taste" bind:open={tasteOpen}>
+					<div class="flex flex-col gap-4">
+						<span class="text-sm font-semibold">Flavor</span>
+						<div class={pairClass}>
+							<RatingRow name="flavorComplexity" label="Complexity" bind:value={flavorComplexity} />
+							<RatingRow name="flavorSweetness" label="Sweetness" bind:value={flavorSweetness} />
+						</div>
+						<textarea
+							bind:value={noteText.flavorNotes}
+							name="flavorNotes"
+							rows="2"
+							placeholder="Notes on flavor..."
+							class={textareaClass}
+						></textarea>
+					</div>
+
+					<div class="flex flex-col gap-4">
+						<span class="text-sm font-semibold">Acidity</span>
+						<div class={pairClass}>
+							<RatingRow name="acidityIntensity" label="Intensity" bind:value={acidityIntensity} />
+							<RatingRow name="acidityQuality" label="Quality" bind:value={acidityQuality} />
+						</div>
+						<textarea
+							bind:value={noteText.acidityNotes}
+							name="acidityNotes"
+							rows="2"
+							placeholder="Notes on acidity..."
+							class={textareaClass}
+						></textarea>
+					</div>
+
+					<div class="flex flex-col gap-4">
+						<span class="text-sm font-semibold">Body</span>
+						<div class={pairClass}>
+							<RatingRow name="bodyWeight" label="Weight" bind:value={bodyWeight} />
+							<RatingRow name="bodyTactile" label="Tactile" bind:value={bodyTactile} />
+						</div>
+						<textarea
+							bind:value={noteText.bodyNotes}
+							name="bodyNotes"
+							rows="2"
+							placeholder="Notes on body..."
+							class={textareaClass}
+						></textarea>
+					</div>
+
+					<div class="flex flex-col gap-4">
+						<span class="text-sm font-semibold">Finish</span>
+						<div class={pairClass}>
+							<RatingRow name="finishFlavor" label="Flavor" bind:value={finishFlavor} />
+							<RatingRow name="finishLength" label="Length" bind:value={finishLength} />
+						</div>
+						<textarea
+							bind:value={noteText.finishNotes}
+							name="finishNotes"
+							rows="2"
+							placeholder="Notes on finish..."
+							class={textareaClass}
+						></textarea>
+					</div>
+
+					<div class="flex flex-col gap-1">
+						<label for="tasterNotes" class={labelClass}>What You Tasted</label>
+						<TagInput
+							id="tasterNotes"
+							name="tasterNotes"
+							bind:tags={tasterNotes}
+							suggestions={noteSuggestions}
+							quickPicks={roasterNotes}
+							quickPickLabel="Tasted the roaster's notes? Tap to add"
+							placeholder="e.g. blueberry, cocoa, lemon"
+							{inputClass}
+						/>
+						<p class="text-[10px] text-gray-400">
+							Your own notes — compared against the roaster's on your dashboard.
+						</p>
+					</div>
+				</FormSection>
+			{:else}
+				<BeerSections
+					draft={beer}
+					bind:tasterNotes
+					{hopSuggestions}
+					{ingredientSuggestions}
+					{noteSuggestions}
 					{inputClass}
 					{labelClass}
+					{textareaClass}
+					{pairClass}
 				/>
-
-				<!-- items-end: a label that wraps on a phone pushes up, not its input down. -->
-				<div class="grid grid-cols-3 items-end gap-6">
-					<div class="flex flex-col gap-1">
-						<label for="coffeeGrams" class={labelClass}>Coffee (g)</label>
-						<input
-							id="coffeeGrams"
-							name="coffeeGrams"
-							type="number"
-							min="0"
-							bind:value={coffeeGrams}
-							class={inputClass}
-						/>
-					</div>
-
-					<div class="flex flex-col gap-1">
-						<label for="waterGrams" class={labelClass}>Water (g)</label>
-						<input
-							id="waterGrams"
-							name="waterGrams"
-							type="number"
-							min="0"
-							bind:value={waterGrams}
-							class={inputClass}
-						/>
-					</div>
-
-					<div class="flex flex-col gap-1">
-						<label for="waterTempF" class={labelClass}>Water Temp (°F)</label>
-						<input
-							id="waterTempF"
-							name="waterTempF"
-							type="number"
-							min="0"
-							bind:value={waterTempF}
-							class={inputClass}
-						/>
-					</div>
-				</div>
-
-				<div class="flex flex-col gap-1">
-					<span class={labelClass}>Brew Time</span>
-					{#key brewTimeVersion}
-						<BrewTimeInput name="brewTimeSeconds" initialSeconds={brewTimeSeed} {inputClass} />
-					{/key}
-				</div>
-
-				<div class="grid grid-cols-2 gap-6">
-					<div class="flex flex-col gap-1">
-						<label for="roastDate" class={labelClass}>Roast Date</label>
-						<input
-							id="roastDate"
-							name="roastDate"
-							type="date"
-							bind:value={roastDate}
-							class={inputClass}
-						/>
-					</div>
-
-					<div class="flex flex-col gap-1">
-						<label for="brewDate" class={labelClass}>Brew Date</label>
-						<input
-							id="brewDate"
-							name="brewDate"
-							type="date"
-							bind:value={brewDate}
-							class={inputClass}
-						/>
-					</div>
-				</div>
-			</FormSection>
-
-			<FormSection title="Fragrance & Aroma" bind:open={fragranceOpen}>
-				<p class="text-xs text-gray-500">
-					Smell it twice: once dry, once brewed. Fragrance often reads sweeter and roastier;
-					aroma is where fruit and florals open up. Note what changes between the two.
-				</p>
-
-				<div class="flex flex-col gap-4">
-					<div class="flex flex-col gap-1">
-						<span class="text-sm font-semibold">Fragrance</span>
-						<span class="text-[10px] text-gray-400">
-							Dry — the ground coffee, before any water touches it.
-						</span>
-					</div>
-					<div class={pairClass}>
-						<RatingRow
-							name="fragranceIntensity"
-							label="Intensity"
-							bind:value={fragranceIntensity}
-						/>
-					</div>
-					<textarea
-						bind:value={noteText.fragranceNotes}
-						name="fragranceNotes"
-						rows="2"
-						placeholder="e.g. brown sugar, cocoa, toasted nuts"
-						class={textareaClass}
-					></textarea>
-				</div>
-
-				<div class="flex flex-col gap-4">
-					<div class="flex flex-col gap-1">
-						<span class="text-sm font-semibold">Aroma</span>
-						<span class="text-[10px] text-gray-400">
-							Wet — the brewed cup, or the grounds as they bloom.
-						</span>
-					</div>
-					<div class={pairClass}>
-						<RatingRow name="aromaIntensity" label="Intensity" bind:value={aromaIntensity} />
-						<RatingRow name="aromaClarity" label="Clarity" bind:value={aromaClarity} />
-					</div>
-					<textarea
-						bind:value={noteText.aromaNotes}
-						name="aromaNotes"
-						rows="2"
-						placeholder="What changed once water hit? e.g. jasmine opened up, cocoa faded"
-						class={textareaClass}
-					></textarea>
-				</div>
-			</FormSection>
-
-			<FormSection title="Taste" bind:open={tasteOpen}>
-				<div class="flex flex-col gap-4">
-					<span class="text-sm font-semibold">Flavor</span>
-					<div class={pairClass}>
-						<RatingRow name="flavorComplexity" label="Complexity" bind:value={flavorComplexity} />
-						<RatingRow name="flavorSweetness" label="Sweetness" bind:value={flavorSweetness} />
-					</div>
-					<textarea
-						bind:value={noteText.flavorNotes}
-						name="flavorNotes"
-						rows="2"
-						placeholder="Notes on flavor..."
-						class={textareaClass}
-					></textarea>
-				</div>
-
-				<div class="flex flex-col gap-4">
-					<span class="text-sm font-semibold">Acidity</span>
-					<div class={pairClass}>
-						<RatingRow name="acidityIntensity" label="Intensity" bind:value={acidityIntensity} />
-						<RatingRow name="acidityQuality" label="Quality" bind:value={acidityQuality} />
-					</div>
-					<textarea
-						bind:value={noteText.acidityNotes}
-						name="acidityNotes"
-						rows="2"
-						placeholder="Notes on acidity..."
-						class={textareaClass}
-					></textarea>
-				</div>
-
-				<div class="flex flex-col gap-4">
-					<span class="text-sm font-semibold">Body</span>
-					<div class={pairClass}>
-						<RatingRow name="bodyWeight" label="Weight" bind:value={bodyWeight} />
-						<RatingRow name="bodyTactile" label="Tactile" bind:value={bodyTactile} />
-					</div>
-					<textarea
-						bind:value={noteText.bodyNotes}
-						name="bodyNotes"
-						rows="2"
-						placeholder="Notes on body..."
-						class={textareaClass}
-					></textarea>
-				</div>
-
-				<div class="flex flex-col gap-4">
-					<span class="text-sm font-semibold">Finish</span>
-					<div class={pairClass}>
-						<RatingRow name="finishFlavor" label="Flavor" bind:value={finishFlavor} />
-						<RatingRow name="finishLength" label="Length" bind:value={finishLength} />
-					</div>
-					<textarea
-						bind:value={noteText.finishNotes}
-						name="finishNotes"
-						rows="2"
-						placeholder="Notes on finish..."
-						class={textareaClass}
-					></textarea>
-				</div>
-
-				<div class="flex flex-col gap-1">
-					<label for="tasterNotes" class={labelClass}>What You Tasted</label>
-					<TagInput
-						id="tasterNotes"
-						name="tasterNotes"
-						bind:tags={tasterNotes}
-						suggestions={noteSuggestions}
-						quickPicks={roasterNotes}
-						quickPickLabel="Tasted the roaster's notes? Tap to add"
-						placeholder="e.g. blueberry, cocoa, lemon"
-						{inputClass}
-					/>
-					<p class="text-[10px] text-gray-400">
-						Your own notes — compared against the roaster's on your dashboard.
-					</p>
-				</div>
-			</FormSection>
+			{/if}
 
 			<FormSection title="Final Thoughts" bind:open={thoughtsOpen}>
 				<label for="freeText" class="sr-only">Final Thoughts</label>

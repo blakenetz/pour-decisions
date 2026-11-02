@@ -12,7 +12,7 @@ const data = $derived(
 			roastLevel: fact.roastLevel as number,
 			quality: fact.quality as number,
 			country: fact.country ?? 'Unknown',
-			roaster: fact.roaster ?? 'Unknown',
+			roaster: fact.producer ?? 'Unknown',
 			productName: fact.productName ?? '—'
 		}))
 )

@@ -59,10 +59,10 @@ const labelClass = 'text-xs uppercase tracking-widest text-gray-500'
 			class="border border-gray-200 rounded-lg p-5 flex flex-col gap-6"
 		>
 			<div>
-				<h2 class="text-sm uppercase tracking-widest text-gray-500 font-semibold">Pour Defaults</h2>
+				<h2 class="text-sm uppercase tracking-widest text-gray-500 font-semibold">Coffee Defaults</h2>
 				<p class="text-sm text-gray-500 mt-1">
-					Your usual brew setup. It's pre-filled each time you log a pour, and you can still change it
-					per pour. Leave a field blank for no default.
+					Your usual coffee setup. Fill it into a coffee pour with "My defaults". Leave a field blank
+					for no default.
 				</p>
 			</div>
 

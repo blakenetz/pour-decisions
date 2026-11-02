@@ -8,6 +8,13 @@ import {
 } from '@aws-sdk/lib-dynamodb'
 import { ulid } from 'ulid'
 import {
+	type BEER_CLARITY,
+	type BEER_COLORS,
+	BEER_FLAVOR_NOTES,
+	type BeerStyleFamily,
+	SERVINGS
+} from '../src/lib/types/beer'
+import {
 	type BrewMethod,
 	type Country,
 	GRIND_SIZES,
@@ -51,6 +58,9 @@ const db = DynamoDBDocumentClient.from(client, {
  *   - process                   — naturals read fruity, heavy and sweet;
  *     washed reads clean and bright
  *   - days off roast            — a freshness curve peaking around two weeks
+ * Every fourth pour is a beer, from a palate that favors IPAs and sours over
+ * lagers and stouts, likes its IPAs fresh, and has a soft spot for citra and
+ * mosaic. Its descriptive ratings follow the style, not the quality.
  * Ratings are then sampled around that latent quality with noise, so the
  * signal is real but not trivially clean.
  * ----------------------------------------------------------------------- */
@@ -283,7 +293,7 @@ interface GeneratedPour {
 	entry: Omit<TastingEntry, 'userId' | 'entryId'>
 }
 
-function generatePour(random: () => number): GeneratedPour {
+function generateCoffeePour(random: () => number): GeneratedPour {
 	const coffee = CATALOGUE[Math.floor(random() * CATALOGUE.length)]
 	const brewMethod = BREW_METHOD_POOL[Math.floor(random() * BREW_METHOD_POOL.length)]
 
@@ -375,8 +385,8 @@ function generatePour(random: () => number): GeneratedPour {
 		throw new Error(`Generated entry failed validation: ${JSON.stringify(parsed.error.issues)}`)
 	}
 
-	const qualityScore = computeQualityScore(parsed.data.notes)
-	const intensityScore = computeIntensityScore(parsed.data.notes)
+	const qualityScore = computeQualityScore(parsed.data)
+	const intensityScore = computeIntensityScore(parsed.data)
 
 	return {
 		entry: {
@@ -405,6 +415,256 @@ function pickTasterNotes(coffee: Coffee, fruit: number, random: () => number): s
 	return [...tags]
 }
 
+interface Beer {
+	brewery: string
+	productName: string
+	style: string
+	/** Only for custom styles; catalogue styles get theirs from the schema. */
+	styleFamily?: BeerStyleFamily
+	/** The family this palate scores it by, whether derived or custom. */
+	family: BeerStyleFamily
+	abv: number
+	ibu: number
+	hops: string[]
+	ingredients: string[]
+	breweryNotes: string[]
+	color: (typeof BEER_COLORS)[number]
+	clarity: (typeof BEER_CLARITY)[number]
+}
+
+/** One of each style family this palate drinks, plus a custom style ("Cold IPA"). */
+const BEER_CATALOGUE: Beer[] = [
+	{
+		brewery: 'Tree House',
+		productName: 'Julius',
+		style: 'Hazy IPA',
+		family: 'IPA',
+		abv: 6.8,
+		ibu: 35,
+		hops: ['citra', 'mosaic', 'simcoe'],
+		ingredients: ['oats', 'wheat'],
+		breweryNotes: ['mango', 'passion fruit', 'orange'],
+		color: 'Gold',
+		clarity: 'Hazy'
+	},
+	{
+		brewery: 'Firestone Walker',
+		productName: 'Union Jack',
+		style: 'West Coast IPA',
+		family: 'IPA',
+		abv: 7,
+		ibu: 70,
+		hops: ['cascade', 'centennial', 'simcoe', 'amarillo'],
+		ingredients: [],
+		breweryNotes: ['grapefruit', 'pine', 'resin'],
+		color: 'Gold',
+		clarity: 'Clear'
+	},
+	{
+		brewery: 'Wayfinder',
+		productName: 'Original Cold IPA',
+		style: 'Cold IPA',
+		styleFamily: 'IPA',
+		family: 'IPA',
+		abv: 6.9,
+		ibu: 55,
+		hops: ['el dorado', 'mosaic', 'strata'],
+		ingredients: ['rice', 'corn'],
+		breweryNotes: ['lime', 'tropical fruit', 'crisp'],
+		color: 'Straw',
+		clarity: 'Brilliant'
+	},
+	{
+		brewery: 'Firestone Walker',
+		productName: 'Pivo Pils',
+		style: 'Pilsner',
+		family: 'Lager & Pilsner',
+		abv: 5.3,
+		ibu: 40,
+		hops: ['hallertau mittelfrüh', 'saaz'],
+		ingredients: ['pilsner malt'],
+		breweryNotes: ['floral', 'cracker', 'crisp'],
+		color: 'Straw',
+		clarity: 'Brilliant'
+	},
+	{
+		brewery: 'Founders',
+		productName: 'Imperial Stout',
+		style: 'Imperial Stout',
+		family: 'Stout & Porter',
+		abv: 10.5,
+		ibu: 90,
+		hops: ['chinook'],
+		ingredients: ['roasted barley', 'chocolate malt', 'oats'],
+		breweryNotes: ['chocolate', 'coffee', 'roast'],
+		color: 'Black',
+		clarity: 'Opaque'
+	},
+	{
+		brewery: 'Cascade Brewing',
+		productName: 'Kriek',
+		style: 'Fruited Sour',
+		family: 'Sour & Wild',
+		abv: 7.3,
+		ibu: 8,
+		hops: [],
+		ingredients: ['cherry', 'lactobacillus', 'oak'],
+		breweryNotes: ['cherry', 'tart', 'oak'],
+		color: 'Copper',
+		clarity: 'Clear'
+	},
+	{
+		brewery: 'Brasserie Dupont',
+		productName: 'Saison Dupont',
+		style: 'Saison',
+		family: 'Belgian',
+		abv: 6.5,
+		ibu: 30,
+		hops: ['east kent goldings'],
+		ingredients: ['pilsner malt'],
+		breweryNotes: ['spicy', 'earthy', 'dry'],
+		color: 'Gold',
+		clarity: 'Hazy'
+	},
+	{
+		brewery: 'Weihenstephaner',
+		productName: 'Hefeweissbier',
+		style: 'Hefeweizen',
+		family: 'Wheat',
+		abv: 5.4,
+		ibu: 14,
+		hops: ['hallertau mittelfrüh'],
+		ingredients: ['wheat'],
+		breweryNotes: ['banana', 'clove', 'bready'],
+		color: 'Gold',
+		clarity: 'Hazy'
+	}
+]
+
+/** How much this palate enjoys each family, 0..1. */
+const FAMILY_AFFINITY: Partial<Record<BeerStyleFamily, number>> = {
+	IPA: 0.85,
+	'Sour & Wild': 0.8,
+	Belgian: 0.6,
+	Wheat: 0.55,
+	'Lager & Pilsner': 0.35,
+	'Stout & Porter': 0.3
+}
+
+/** Typical descriptive character per family, on the 1–5 rating scale. Bitterness comes from
+ *  the beer's IBU instead. */
+const FAMILY_CHARACTER: Partial<
+	Record<
+		BeerStyleFamily,
+		{ aroma: number; malt: number; hops: number; sweet: number; body: number; carb: number }
+	>
+> = {
+	IPA: { aroma: 4.3, malt: 2, hops: 4.6, sweet: 2.4, body: 3, carb: 3 },
+	'Lager & Pilsner': { aroma: 2.4, malt: 2.6, hops: 2.6, sweet: 2, body: 2, carb: 4.2 },
+	'Stout & Porter': { aroma: 4, malt: 4.8, hops: 1.8, sweet: 3.6, body: 4.7, carb: 2.2 },
+	'Sour & Wild': { aroma: 4, malt: 1.5, hops: 1.2, sweet: 2, body: 2.2, carb: 3.8 },
+	Belgian: { aroma: 3.8, malt: 2.8, hops: 2.2, sweet: 2.2, body: 2.8, carb: 4.5 },
+	Wheat: { aroma: 3.8, malt: 2.8, hops: 1.5, sweet: 2.6, body: 3, carb: 4.2 }
+}
+
+const DEFAULT_CHARACTER = { aroma: 3, malt: 3, hops: 3, sweet: 2.5, body: 3, carb: 3 }
+
+function generateBeerPour(random: () => number): GeneratedPour {
+	const beer = BEER_CATALOGUE[Math.floor(random() * BEER_CATALOGUE.length)]
+	const tastedAt = new Date(Date.now() - random() * 120 * 86_400_000)
+	const daysOld = Math.round(3 + random() * 57)
+	const packagedAt = new Date(tastedAt.getTime() - daysOld * 86_400_000)
+
+	// --- latent quality, 0..1 -------------------------------------------------
+	const affinity = FAMILY_AFFINITY[beer.family] ?? 0.5
+	// Hops fade fast, so freshness matters far more to an IPA than to a stout.
+	const freshness = 1 - (daysOld - 3) / 57
+	const freshnessBonus = freshness * (beer.family === 'IPA' ? 0.25 : 0.05)
+	const hopBonus = beer.hops.some((hop) => hop === 'citra' || hop === 'mosaic') ? 0.1 : 0
+	const quality = Math.max(
+		0,
+		Math.min(1, affinity * 0.7 + freshnessBonus + hopBonus + (random() - 0.5) * 0.18)
+	)
+
+	// --- descriptive character, from the style --------------------------------
+	const character = FAMILY_CHARACTER[beer.family] ?? DEFAULT_CHARACTER
+	const noise = () => (random() - 0.5) * 0.9
+
+	const notes = {
+		overallRating: Math.max(1, Math.min(10, Math.round(1 + quality * 9 + (random() - 0.5) * 1.5))),
+		color: beer.color,
+		clarity: beer.clarity,
+
+		// Evaluative — track latent quality.
+		appearanceRating: toRating(2 + quality * 3 + noise()),
+		aromaQuality: toRating(1.5 + quality * 3.5 + noise()),
+		flavorBalance: toRating(1.5 + quality * 3.5 + noise()),
+		finishQuality: toRating(1.5 + quality * 3.5 + noise()),
+
+		// Descriptive — track the style, not quality.
+		headRetention: toRating(character.carb - 0.3 + noise()),
+		aromaIntensity: toRating(character.aroma + noise()),
+		maltiness: toRating(character.malt + noise()),
+		hopIntensity: toRating(character.hops + noise()),
+		bitterness: toRating(1 + beer.ibu / 22 + noise()),
+		sweetness: toRating(character.sweet + noise()),
+		bodyWeight: toRating(character.body + noise()),
+		carbonation: toRating(character.carb + noise()),
+		finishLength: toRating(2.5 + (character.body - 3) * 0.5 + beer.ibu / 60 + noise()),
+
+		tasterNotes: pickBeerTasterNotes(beer, random),
+		wouldBuyAgain: quality + (random() - 0.5) * 0.2 > 0.62
+	}
+
+	const location: 'home' | 'out' = random() < 0.7 ? 'home' : 'out'
+	const details = {
+		brewery: beer.brewery,
+		productName: beer.productName,
+		style: beer.style,
+		...(beer.styleFamily && { styleFamily: beer.styleFamily }),
+		abv: beer.abv,
+		ibu: beer.ibu,
+		serving: SERVINGS[Math.floor(random() * SERVINGS.length)],
+		...(beer.hops.length > 0 && { hops: beer.hops }),
+		...(beer.ingredients.length > 0 && { ingredients: beer.ingredients }),
+		breweryNotes: beer.breweryNotes,
+		packagedDate: packagedAt.toISOString().slice(0, 10),
+		tastedOn: tastedAt.toISOString().slice(0, 10),
+		location,
+		...(location === 'out' && { locationName: CAFES[Math.floor(random() * CAFES.length)] })
+	}
+
+	const parsed = createTastingInputSchema.safeParse({ beverageType: 'beer', details, notes })
+	if (!parsed.success) {
+		throw new Error(`Generated beer failed validation: ${JSON.stringify(parsed.error.issues)}`)
+	}
+
+	const qualityScore = computeQualityScore(parsed.data)
+	const intensityScore = computeIntensityScore(parsed.data)
+
+	return {
+		entry: {
+			createdAt: tastedAt.toISOString(),
+			...parsed.data,
+			...(qualityScore !== undefined && { qualityScore }),
+			...(intensityScore !== undefined && { intensityScore })
+		}
+	}
+}
+
+/** About half the brewery's notes, plus up to two of the taster's own. */
+function pickBeerTasterNotes(beer: Beer, random: () => number): string[] {
+	const tags = new Set<string>()
+	for (const note of beer.breweryNotes) {
+		if (random() < 0.5) tags.add(note)
+	}
+	const extra = Math.floor(random() * 3)
+	for (let i = 0; i < extra; i++) {
+		tags.add(BEER_FLAVOR_NOTES[Math.floor(random() * BEER_FLAVOR_NOTES.length)])
+	}
+	return [...tags]
+}
+
 async function seedUserPours(
 	userId: string,
 	count: number,
@@ -428,7 +688,8 @@ async function seedUserPours(
 	const random = createRandom(hashString(userId))
 
 	for (let i = 0; i < count; i++) {
-		const { entry } = generatePour(random)
+		// Every fourth pour is a beer: 120 pours are 90 coffees and 30 beers.
+		const { entry } = i % 4 === 3 ? generateBeerPour(random) : generateCoffeePour(random)
 		await db.send(
 			new PutCommand({ TableName: tableName, Item: { ...entry, userId, entryId: ulid() } })
 		)
@@ -441,7 +702,7 @@ function usage(): never {
 	console.error(
 		'Usage:\n' +
 			'  tsx scripts/seed-pours.ts --userId=<id> --count=<n> [--clear]\n' +
-			'  tsx scripts/seed-pours.ts --zero=<id> --low=<id> --high=<id> [--lowCount=5] [--highCount=15]'
+			'  tsx scripts/seed-pours.ts --zero=<id> --low=<id> --high=<id> [--lowCount=5] [--highCount=120]'
 	)
 	process.exit(1)
 }
@@ -488,9 +749,10 @@ async function main() {
 	}
 
 	if (values.userId && values.count) {
+		// --count=0 with --clear empties the account, e.g. after an e2e spec logged pours.
 		const count = Number(values.count)
-		if (!Number.isInteger(count) || count < 1) {
-			console.error('--count must be a positive integer')
+		if (!Number.isInteger(count) || count < 0 || (count === 0 && !values.clear)) {
+			console.error('--count must be a non-negative integer (0 requires --clear)')
 			process.exit(1)
 		}
 		await seedUserPours(values.userId, count, { clear: !!values.clear })

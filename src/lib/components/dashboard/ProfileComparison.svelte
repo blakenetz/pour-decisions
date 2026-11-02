@@ -1,15 +1,19 @@
 <script lang="ts">
 import { BarChart, Tooltip } from 'layerchart'
 import { type PourFact, profileOf } from '$lib/dashboard/analysis'
+import type { BeverageType } from '$lib/types/tasting'
 
 let {
 	selection,
 	baseline,
+	beverage,
 	selectionLabel = 'This slice',
 	baselineLabel = 'All pours'
 }: {
 	selection: PourFact[]
 	baseline: PourFact[]
+	/** Whose axes to draw; the parent only renders this for a single-beverage selection. */
+	beverage: BeverageType
 	selectionLabel?: string
 	baselineLabel?: string
 } = $props()
@@ -22,11 +26,11 @@ const identical = $derived(selection.length === baseline.length)
 // Long-form rows so the two profiles group side by side on each axis without
 // pivoting into a column per series.
 const data = $derived.by(() => {
-	const selected = profileOf(selection)
+	const selected = profileOf(selection, beverage)
 	if (identical) {
 		return selected.map((row) => ({ axis: row.axis, series: selectionLabel, value: row.value }))
 	}
-	const all = profileOf(baseline)
+	const all = profileOf(baseline, beverage)
 	return selected.flatMap((row, index) => [
 		{ axis: row.axis, series: selectionLabel, value: row.value },
 		{ axis: row.axis, series: baselineLabel, value: all[index].value }
@@ -75,7 +79,7 @@ const legendSpace = $derived(identical ? 0 : 20)
 	</BarChart>
 	<p class="text-xs text-gray-500 mt-1">
 		{#if identical}
-			How loud your cups run across each descriptive axis, 1–5. Filter above to compare a slice
+			How bold your pours run across each descriptive axis, 1–5. Filter above to compare a slice
 			against this baseline.
 		{:else}
 			Descriptive character of this slice against your whole log, 1–5. Higher is louder, not better.

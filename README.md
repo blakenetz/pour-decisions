@@ -7,17 +7,20 @@ Deployed at: https://d3bmjl131h971g.cloudfront.net
 ## Vision
 
 - **v1:** Coffee
-- **v2:** Beer and wine
+- **v2:** Beer (shipped in v0.4.0) and wine
 
 ## Features
 
-- **Tasting form** — Log coffee tastings with quantitative and qualitative data (roaster, origin, process, drink style — an espresso drink fills in the brew method — brew method, where you drank it, grinder + exact dial setting or a descriptive grind size, dry fragrance vs. wet aroma, boldness, acidity, sweetness, flavor notes, overall rating, notes)
-- **Fill from a past pour** — The Roaster and Coffee Name fields suggest coffees you've logged before; picking one fills in origin, process, region, roast level, roaster's notes and roast date from your latest pour of it
-- **Autofill** — "Last setup" fills the coffee, drink, where (including the cafe) and the whole brew setup from your most recent pour, leaving ratings and notes blank for the new cup; "Last entry" copies that pour in full, ratings and notes included. The brew date always stays today
-- **Flavor tags** — Roaster's notes and what you tasted are entered as tags, with suggestions from your own past notes and common cupping descriptors; the roaster's notes are one tap away when logging what you tasted
-- **Where you drank it** — Home or Out; Out shows your recent cafes as one-tap chips, and venue search favors the area of the last cafe you logged
-- **Pour defaults** — Save your usual brew setup (method, grind, dose, water, temp, brew time, where) on the Profile page; the "My defaults" autofill on the tasting form fills it in on demand
-- **Dashboard** — Aggregates and visualizes tasting data (trends, favorites, flavor breakdowns)
+- **Tasting form** — Log coffee or beer, switched with one tap; the form opens on whichever you logged last
+  - **Coffee** — roaster, origin, process, drink style (an espresso drink fills in the brew method), brew method, grinder + exact dial setting or a descriptive grind size, dry fragrance vs. wet aroma, boldness, acidity, sweetness, flavor notes
+  - **Beer** — brewery, style (a catalogue grouped by family, plus styles you add yourself, e.g. "Cold IPA"), ABV, IBU, serving, hops and other ingredients, packaged and tasted dates, appearance, aroma, flavor (malt, hops, bitterness, sweetness, balance), mouthfeel and finish
+  - **Both** — where you drank it, overall rating, would you buy it again, what you tasted, final thoughts
+- **Fill from a past pour** — The producer and name fields suggest coffees or beers you've logged before; picking one fills in its details (origin, process, roast level, roaster's notes and roast date for coffee; style, ABV, IBU, hops, ingredients, brewery's notes and packaged date for beer) from your latest pour of it
+- **Autofill** — "Last setup" fills the coffee or beer, where (including the cafe or bar) and its setup (brew setup for coffee, serving for beer) from your most recent pour of that beverage, leaving ratings and notes blank for the new one; "Last entry" copies that pour in full, ratings and notes included. The pour date always stays today
+- **Flavor tags** — Label notes (roaster's or brewery's), hops, ingredients and what you tasted are entered as tags, with suggestions from your own past tags and common descriptors; the label's notes are one tap away when logging what you tasted
+- **Where you drank it** — Home or Out; Out shows your recent cafes and bars as one-tap chips, and venue search (cafes, bars, breweries) favors the area of the last place you logged
+- **Coffee defaults** — Save your usual brew setup (method, grind, dose, water, temp, brew time, where) on the Profile page; the "My defaults" autofill on a coffee pour fills it in on demand
+- **Dashboard** — One combined dashboard with beverage as a filter and breakdown: trends, favorites, flavor profiles per beverage, label-vs-palate notes, beer style and serving breakdowns, and the hops you keep coming back to
 - **Auth** — Email/password and social sign-in (Google, GitHub, Apple) via AWS Cognito
 
 ## Tech Stack
@@ -32,7 +35,7 @@ Deployed at: https://d3bmjl131h971g.cloudfront.net
 - `pnpm install` — install dependencies
 - `pnpm dev` — start the dev server (http://localhost:8008)
 - `pnpm check` — type-check
-- `pnpm seed -- --userId=<sub> --count=<n> [--clear]` — seed pours for a user
+- `pnpm seed -- --userId=<sub> --count=<n> [--clear]` — seed pours for a user (every fourth is a beer); `--count=0 --clear` empties the account
 
 ## E2E Tests
 
@@ -41,8 +44,8 @@ Deployed at: https://d3bmjl131h971g.cloudfront.net
 | Tier | Email | Pours |
 | --- | --- | --- |
 | Zero | `pour-decisions-e2e-zero@example.com` | 0 |
-| Low | `pour-decisions-e2e-low@example.com` | 5 |
-| High | `pour-decisions-e2e-high@example.com` | 120 |
+| Low | `pour-decisions-e2e-low@example.com` | 5 (1 beer) |
+| High | `pour-decisions-e2e-high@example.com` | 120 (30 beers) |
 
 All three share one password, kept out of git in `.env.test.local` (gitignored):
 
@@ -59,7 +62,7 @@ aws cognito-idp admin-set-user-password \
   --password '<new password>' --permanent
 ```
 
-(repeat per account — all three should stay in sync since the suite uses one shared password, and update the `E2E_TEST_PASSWORD` secret on the `dev` GitHub environment). The e2e run reseeds each account to its expected tier in dev's tastings table before every run via `e2e/global-setup.ts`, so pour counts stay deterministic. Locally the suite runs against `pnpm dev`; on pull requests CI runs it against the dev deployment.
+(repeat per account — all three should stay in sync since the suite uses one shared password, and update the `E2E_TEST_PASSWORD` secret on the `dev` GitHub environment). The e2e run reseeds each account to its expected tier in dev's tastings table before every run via `e2e/global-setup.ts`, so pour counts stay deterministic. `e2e/beer.spec.ts` logs a pour on the zero account and empties it again afterwards. Locally the suite runs against `pnpm dev`; on pull requests CI runs it against the dev deployment.
 
 ## PWA
 

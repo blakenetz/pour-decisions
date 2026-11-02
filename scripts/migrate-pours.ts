@@ -3,6 +3,8 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
 import { DynamoDBDocumentClient, PutCommand, ScanCommand } from '@aws-sdk/lib-dynamodb'
 import { COUNTRIES, normalizeNote } from '../src/lib/types/coffee'
 import {
+	type CoffeeDetails,
+	type CoffeeEntry,
 	computeIntensityScore,
 	computeQualityScore,
 	type TastingEntry
@@ -22,7 +24,8 @@ import {
  *                                     over, since the old number mixed the two
  *   - `details.roasterNotes`       -> normalized casing so tags group
  *
- * Idempotent: entries already in the new shape are left untouched.
+ * Idempotent: entries already in the new shape are left untouched. Only coffee rows are
+ * considered: every legacy shape predates beer.
  */
 
 try {
@@ -39,10 +42,10 @@ const db = DynamoDBDocumentClient.from(client, {
 	marshallOptions: { removeUndefinedValues: true }
 })
 
-/** Entry shape as it may exist on disk, including the pre-migration fields. */
-type LegacyEntry = TastingEntry & {
+/** Coffee entry shape as it may exist on disk, including the pre-migration fields. */
+type LegacyEntry = CoffeeEntry & {
 	avgCategoryRating?: number
-	details?: TastingEntry['details'] & { producer?: string }
+	details?: CoffeeDetails & { producer?: string }
 }
 
 const COUNTRY_SET = new Set<string>(COUNTRIES)
@@ -69,7 +72,7 @@ function splitRegion(region: string): { country: string; region?: string } | nul
 	return null
 }
 
-function migrateEntry(entry: LegacyEntry): TastingEntry | null {
+function migrateEntry(entry: LegacyEntry): CoffeeEntry | null {
 	let changed = false
 	const details = { ...entry.details } as LegacyEntry['details'] & Record<string, unknown>
 
@@ -96,8 +99,8 @@ function migrateEntry(entry: LegacyEntry): TastingEntry | null {
 		}
 	}
 
-	const qualityScore = computeQualityScore(entry.notes)
-	const intensityScore = computeIntensityScore(entry.notes)
+	const qualityScore = computeQualityScore(entry)
+	const intensityScore = computeIntensityScore(entry)
 	if (
 		entry.avgCategoryRating !== undefined ||
 		entry.qualityScore !== qualityScore ||
@@ -108,12 +111,12 @@ function migrateEntry(entry: LegacyEntry): TastingEntry | null {
 
 	if (!changed) return null
 
-	const migrated: TastingEntry = {
+	const migrated: CoffeeEntry = {
 		userId: entry.userId,
 		entryId: entry.entryId,
 		beverageType: entry.beverageType,
 		createdAt: entry.createdAt,
-		...(entry.details && { details: details as TastingEntry['details'] }),
+		...(entry.details && { details: details as CoffeeDetails }),
 		...(entry.notes && { notes: entry.notes }),
 		...(qualityScore !== undefined && { qualityScore }),
 		...(intensityScore !== undefined && { intensityScore })
@@ -133,9 +136,10 @@ async function main() {
 		const result = await db.send(
 			new ScanCommand({ TableName: tableName, ExclusiveStartKey: startKey })
 		)
-		for (const item of (result.Items ?? []) as LegacyEntry[]) {
+		for (const item of (result.Items ?? []) as TastingEntry[]) {
 			scanned++
-			const next = migrateEntry(item)
+			if (item.beverageType !== 'coffee') continue
+			const next = migrateEntry(item as LegacyEntry)
 			if (!next) continue
 			migrated++
 			if (dryRun) {

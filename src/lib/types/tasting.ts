@@ -1,5 +1,13 @@
 import { z } from 'zod'
 import {
+	BEER_CLARITY,
+	BEER_COLORS,
+	BEER_STYLE_FAMILIES,
+	type BeerStyleFamily,
+	canonicalStyle,
+	SERVINGS
+} from './beer'
+import {
 	BREW_METHODS,
 	COUNTRIES,
 	DRINK_STYLES,
@@ -9,13 +17,25 @@ import {
 } from './coffee'
 import { dialPosition, GRINDER_IDS, type GrinderId, grindBand, grinderName } from './grinders'
 
-export type BeverageType = 'coffee'
+export const BEVERAGES = ['coffee', 'beer'] as const
 
-/** Where the pour happened. `'out'` covers anywhere away from home — a cafe, a
- *  friend's place, the office — captured via {@link TastingDetails.locationName}. */
+export type BeverageType = (typeof BEVERAGES)[number]
+
+/** Where the pour happened. `'out'` covers anywhere away from home — a cafe, a bar,
+ *  a friend's place — captured via {@link PourLocationFields.locationName}. */
 export type PourLocation = 'home' | 'out'
 
-export interface TastingDetails {
+/** Where a pour happened, shared by every beverage. */
+export interface PourLocationFields {
+	location?: PourLocation
+	/** Place name, e.g. "Blue Bottle Coffee — Mission". Only set when `location` is `'out'`. */
+	locationName?: string
+	locationAddress?: string
+	locationLat?: number
+	locationLng?: number
+}
+
+export interface CoffeeDetails extends PourLocationFields {
 	/** The company that roasted the beans. */
 	roaster?: string
 	productName?: string
@@ -46,22 +66,26 @@ export interface TastingDetails {
 	brewTimeSeconds?: number
 	roastDate?: string
 	brewDate?: string
-	location?: PourLocation
-	/** Place name, e.g. "Blue Bottle Coffee — Mission". Only set when `location` is `'out'`. */
-	locationName?: string
-	locationAddress?: string
-	locationLat?: number
-	locationLng?: number
 }
 
-const tastingDetailsObject = z.object({
+const locationShape = {
+	location: z.enum(['home', 'out']).optional(),
+	locationName: z.string().trim().min(1).max(200).optional(),
+	locationAddress: z.string().trim().min(1).max(300).optional(),
+	locationLat: z.number().min(-90).max(90).optional(),
+	locationLng: z.number().min(-180).max(180).optional()
+}
+
+const tagList = z.array(z.string().trim().min(1).max(60)).max(20).optional()
+
+const coffeeDetailsObject = z.object({
 	roaster: z.string().trim().min(1).max(200).optional(),
 	productName: z.string().trim().min(1).max(200).optional(),
 	country: z.enum(COUNTRIES).optional(),
 	region: z.string().trim().min(1).max(200).optional(),
 	process: z.enum(PROCESSES).optional(),
 	roastLevel: z.number().int().min(1).max(10).optional(),
-	roasterNotes: z.array(z.string().trim().min(1).max(60)).max(20).optional(),
+	roasterNotes: tagList,
 	drinkStyle: z.enum(DRINK_STYLES).optional(),
 	brewMethod: z.enum(BREW_METHODS).optional(),
 	grindSize: z.enum(GRIND_SIZES).optional(),
@@ -73,11 +97,7 @@ const tastingDetailsObject = z.object({
 	brewTimeSeconds: z.number().int().positive().max(86_400).optional(),
 	roastDate: z.iso.date().optional(),
 	brewDate: z.iso.date().optional(),
-	location: z.enum(['home', 'out']).optional(),
-	locationName: z.string().trim().min(1).max(200).optional(),
-	locationAddress: z.string().trim().min(1).max(300).optional(),
-	locationLat: z.number().min(-90).max(90).optional(),
-	locationLng: z.number().min(-180).max(180).optional()
+	...locationShape
 })
 
 /** Shared by pours and saved defaults so both reject the same impossible recipe. */
@@ -128,7 +148,7 @@ function withGrindBand<T extends GrindRecipe>(recipe: T): T {
 	return { ...recipe, grindSize }
 }
 
-export const tastingDetailsSchema = tastingDetailsObject
+export const coffeeDetailsSchema = coffeeDetailsObject
 	.refine(waterCoversCoffee, waterCoversCoffeeIssue)
 	.refine(
 		(details) =>
@@ -146,7 +166,7 @@ export const tastingDetailsSchema = tastingDetailsObject
  * ratings would bias the scores the dashboard ranks by. Validated with the same rules as a
  * pour's details.
  */
-export const pourDefaultsSchema = tastingDetailsObject
+export const pourDefaultsSchema = coffeeDetailsObject
 	.pick({
 		brewMethod: true,
 		grinder: true,
@@ -164,7 +184,69 @@ export const pourDefaultsSchema = tastingDetailsObject
 
 export type PourDefaults = z.infer<typeof pourDefaultsSchema>
 
-export interface TastingNotes {
+export interface BeerDetails extends PourLocationFields {
+	brewery?: string
+	/** The beer's name. Same key as coffee so name matching stays beverage-agnostic. */
+	productName?: string
+	/** Catalogue spelling for known styles ({@link BEER_STYLES}), else the taster's own. */
+	style?: string
+	/** Always set alongside {@link style}: derived for catalogue styles, picked (or
+	 *  `'Specialty'`) for custom ones. */
+	styleFamily?: BeerStyleFamily
+	abv?: number
+	ibu?: number
+	serving?: string
+	/** Normalized hop tags, e.g. ["citra", "mosaic"]. */
+	hops?: string[]
+	/** Normalized malt, adjunct and yeast tags, e.g. ["oats", "lactose"]. */
+	ingredients?: string[]
+	/** Normalized tags the brewery printed on the can — the beer's {@link CoffeeDetails.roasterNotes}. */
+	breweryNotes?: string[]
+	packagedDate?: string
+	tastedOn?: string
+}
+
+const beerDetailsObject = z.object({
+	brewery: z.string().trim().min(1).max(200).optional(),
+	productName: z.string().trim().min(1).max(200).optional(),
+	style: z.string().trim().min(1).max(80).optional(),
+	styleFamily: z.enum(BEER_STYLE_FAMILIES).optional(),
+	abv: z.number().min(0).max(70).optional(),
+	ibu: z.number().int().min(0).max(200).optional(),
+	serving: z.enum(SERVINGS).optional(),
+	hops: tagList,
+	ingredients: tagList,
+	breweryNotes: tagList,
+	packagedDate: z.iso.date().optional(),
+	tastedOn: z.iso.date().optional(),
+	...locationShape
+})
+
+/** The catalogue's family always wins over input, the same way {@link withGrindBand} trusts
+ *  the dial, so a "Pilsner" can't be filed under stouts. Custom styles keep the family the
+ *  taster picked, falling back to `'Specialty'` so every styled beer lands in a group. */
+function withStyleFamily<T extends { style?: string; styleFamily?: BeerStyleFamily }>(
+	details: T
+): T {
+	if (details.style === undefined) {
+		const { styleFamily: _dropped, ...rest } = details
+		return rest as T
+	}
+	const { style, family } = canonicalStyle(details.style)
+	return { ...details, style, styleFamily: family ?? details.styleFamily ?? 'Specialty' }
+}
+
+export const beerDetailsSchema = beerDetailsObject
+	.refine(
+		(details) =>
+			details.packagedDate === undefined ||
+			details.tastedOn === undefined ||
+			details.tastedOn >= details.packagedDate,
+		{ message: 'Tasted date cannot be before the packaged date', path: ['tastedOn'] }
+	)
+	.transform(withStyleFamily)
+
+export interface CoffeeNotes {
 	/** 1–10. The taster's direct, holistic judgment — distinct from
 	 *  `TastingEntry.qualityScore`, which is computed from the evaluative fields below. */
 	overallRating?: number
@@ -200,7 +282,7 @@ export interface TastingNotes {
 	finishLength?: number
 	finishNotes?: string
 	/** Normalized tags for what the taster actually tasted — compare against
-	 *  {@link TastingDetails.roasterNotes} to see where palate and bag disagree. */
+	 *  {@link CoffeeDetails.roasterNotes} to see where palate and bag disagree. */
 	tasterNotes?: string[]
 	/** The cheapest strong preference signal there is. */
 	wouldBuyAgain?: boolean
@@ -209,28 +291,92 @@ export interface TastingNotes {
 
 /** Sub-ratings that judge how *good* the coffee is. Averaged into
  *  {@link computeQualityScore}. */
-const QUALITY_FIELDS = [
+const COFFEE_QUALITY_FIELDS = [
 	'aromaClarity',
 	'flavorComplexity',
 	'flavorSweetness',
 	'acidityQuality',
 	'finishFlavor'
-] as const satisfies readonly (keyof TastingNotes)[]
+] as const satisfies readonly (keyof CoffeeNotes)[]
 
 /** Sub-ratings that describe how *loud* the coffee is. Intensity is a preference
  *  axis, not a quality axis — a delicate cup is not a worse cup — so these stay out
  *  of the score and are charted as a profile shape instead. */
-const INTENSITY_FIELDS = [
+const COFFEE_INTENSITY_FIELDS = [
 	'aromaIntensity',
 	'acidityIntensity',
 	'bodyWeight',
 	'bodyTactile',
 	'finishLength'
-] as const satisfies readonly (keyof TastingNotes)[]
+] as const satisfies readonly (keyof CoffeeNotes)[]
+
+export interface BeerNotes {
+	/** 1–10, as for coffee. */
+	overallRating?: number
+	color?: string
+	clarity?: string
+	/** 1–5. Descriptive: how long the foam holds. */
+	headRetention?: number
+	/** 1–5. Evaluative: how good it looks for the style. */
+	appearanceRating?: number
+	appearanceNotes?: string
+	/** 1–5. Descriptive. */
+	aromaIntensity?: number
+	/** 1–5. Evaluative. */
+	aromaQuality?: number
+	aromaNotes?: string
+	/** 1–5. Descriptive. */
+	maltiness?: number
+	/** 1–5. Descriptive: hop flavor, distinct from {@link bitterness}. */
+	hopIntensity?: number
+	/** 1–5. Descriptive. */
+	bitterness?: number
+	/** 1–5. Descriptive. Kept out of {@link computeIntensityScore}, like coffee's fragrance. */
+	sweetness?: number
+	/** 1–5. Evaluative: whether malt, hops and sweetness sit together. */
+	flavorBalance?: number
+	flavorNotes?: string
+	/** 1–5. Descriptive. */
+	bodyWeight?: number
+	/** 1–5. Descriptive. */
+	carbonation?: number
+	mouthfeelNotes?: string
+	/** 1–5. Descriptive. */
+	finishLength?: number
+	/** 1–5. Evaluative. */
+	finishQuality?: number
+	finishNotes?: string
+	/** Normalized tags for what the taster tasted — compare against
+	 *  {@link BeerDetails.breweryNotes}. */
+	tasterNotes?: string[]
+	wouldBuyAgain?: boolean
+	freeText?: string
+}
+
+const BEER_QUALITY_FIELDS = [
+	'appearanceRating',
+	'aromaQuality',
+	'flavorBalance',
+	'finishQuality'
+] as const satisfies readonly (keyof BeerNotes)[]
+
+const BEER_INTENSITY_FIELDS = [
+	'aromaIntensity',
+	'maltiness',
+	'hopIntensity',
+	'bitterness',
+	'bodyWeight',
+	'carbonation'
+] as const satisfies readonly (keyof BeerNotes)[]
+
+interface ScoredEntry {
+	beverageType: BeverageType
+	notes?: CoffeeNotes | BeerNotes
+}
 
 function meanOfFields(
-	notes: TastingNotes | undefined,
-	fields: readonly (keyof TastingNotes)[]
+	notes: Record<string, unknown> | undefined,
+	fields: readonly string[]
 ): number | undefined {
 	if (!notes) return undefined
 	const values = fields
@@ -241,7 +387,8 @@ function meanOfFields(
 }
 
 /**
- * A pour's quality score (1–5): the mean of the *evaluative* sub-ratings only.
+ * A pour's quality score (1–5): the mean of the *evaluative* sub-ratings only, picked by
+ * beverage so coffee and beer land on the same scale.
  *
  * Deliberately excludes the intensity fields. Averaging "acidity intensity" into a
  * quality score asserts that a louder coffee is a better one, which turns every
@@ -249,17 +396,19 @@ function meanOfFields(
  * rather than preference. `undefined` when the taster rated none of these fields.
  * Computed once at write time and persisted so every consumer reads one number.
  */
-export function computeQualityScore(notes: TastingNotes | undefined): number | undefined {
-	return meanOfFields(notes, QUALITY_FIELDS)
+export function computeQualityScore(entry: ScoredEntry): number | undefined {
+	const fields = entry.beverageType === 'beer' ? BEER_QUALITY_FIELDS : COFFEE_QUALITY_FIELDS
+	return meanOfFields(entry.notes as Record<string, unknown> | undefined, fields)
 }
 
 /** A pour's intensity score (1–5): the mean of the descriptive sub-ratings. Pairs
  *  with {@link computeQualityScore} to plot "how loud" against "how good". */
-export function computeIntensityScore(notes: TastingNotes | undefined): number | undefined {
-	return meanOfFields(notes, INTENSITY_FIELDS)
+export function computeIntensityScore(entry: ScoredEntry): number | undefined {
+	const fields = entry.beverageType === 'beer' ? BEER_INTENSITY_FIELDS : COFFEE_INTENSITY_FIELDS
+	return meanOfFields(entry.notes as Record<string, unknown> | undefined, fields)
 }
 
-export const tastingNotesSchema = z.object({
+export const coffeeNotesSchema = z.object({
 	overallRating: z.number().int().min(1).max(10).optional(),
 	fragranceIntensity: z.number().int().min(1).max(5).optional(),
 	fragranceNotes: z.string().trim().max(1000).optional(),
@@ -278,38 +427,87 @@ export const tastingNotesSchema = z.object({
 	finishFlavor: z.number().int().min(1).max(5).optional(),
 	finishLength: z.number().int().min(1).max(5).optional(),
 	finishNotes: z.string().trim().max(1000).optional(),
-	tasterNotes: z.array(z.string().trim().min(1).max(60)).max(20).optional(),
+	tasterNotes: tagList,
 	wouldBuyAgain: z.boolean().optional(),
 	freeText: z.string().trim().max(1000).optional()
 })
 
-export interface TastingEntry {
+const rating = z.number().int().min(1).max(5).optional()
+const noteText = z.string().trim().max(1000).optional()
+
+export const beerNotesSchema = z.object({
+	overallRating: z.number().int().min(1).max(10).optional(),
+	color: z.enum(BEER_COLORS).optional(),
+	clarity: z.enum(BEER_CLARITY).optional(),
+	headRetention: rating,
+	appearanceRating: rating,
+	appearanceNotes: noteText,
+	aromaIntensity: rating,
+	aromaQuality: rating,
+	aromaNotes: noteText,
+	maltiness: rating,
+	hopIntensity: rating,
+	bitterness: rating,
+	sweetness: rating,
+	flavorBalance: rating,
+	flavorNotes: noteText,
+	bodyWeight: rating,
+	carbonation: rating,
+	mouthfeelNotes: noteText,
+	finishLength: rating,
+	finishQuality: rating,
+	finishNotes: noteText,
+	tasterNotes: tagList,
+	wouldBuyAgain: z.boolean().optional(),
+	freeText: noteText
+})
+
+interface EntryBase {
 	userId: string
 	entryId: string
-	beverageType: BeverageType
 	createdAt: string
-	details?: TastingDetails
-	notes?: TastingNotes
 	/** Computed by {@link computeQualityScore} at write time; not user-editable. */
 	qualityScore?: number
 	/** Computed by {@link computeIntensityScore} at write time; not user-editable. */
 	intensityScore?: number
 }
 
-export type CreateTastingInput = Omit<TastingEntry, 'userId' | 'entryId' | 'createdAt'>
+export type CoffeeEntry = EntryBase & {
+	beverageType: 'coffee'
+	details?: CoffeeDetails
+	notes?: CoffeeNotes
+}
 
-export const createTastingInputSchema = z
+export type BeerEntry = EntryBase & {
+	beverageType: 'beer'
+	details?: BeerDetails
+	notes?: BeerNotes
+}
+
+export type TastingEntry = CoffeeEntry | BeerEntry
+
+/** `Pick` that keeps the beverage discriminant working: picks from each entry type
+ *  separately rather than from their merged shape. */
+export type EntryPick<K extends keyof TastingEntry> = TastingEntry extends infer E
+	? E extends TastingEntry
+		? Pick<E, K>
+		: never
+	: never
+
+const overallRatingIssue = {
+	message: 'Add an overall rating',
+	path: ['notes', 'overallRating']
+}
+
+// A pour is only worth keeping if it can be rated and identified, so the up-front
+// fields are required here (not just in the UI) to guard the API too.
+const coffeeInput = z
 	.object({
 		beverageType: z.literal('coffee'),
-		details: tastingDetailsSchema.optional(),
-		notes: tastingNotesSchema.optional()
+		details: coffeeDetailsSchema.optional(),
+		notes: coffeeNotesSchema.optional()
 	})
-	// A pour is only worth keeping if it can be rated and identified, so the three
-	// up-front fields are required here (not just in the UI) to guard the API too.
-	.refine((input) => input.notes?.overallRating !== undefined, {
-		message: 'Add an overall rating',
-		path: ['notes', 'overallRating']
-	})
+	.refine((input) => input.notes?.overallRating !== undefined, overallRatingIssue)
 	.refine((input) => Boolean(input.details?.roaster || input.details?.productName), {
 		message: 'Add a roaster or coffee name',
 		path: ['details', 'roaster']
@@ -319,9 +517,33 @@ export const createTastingInputSchema = z
 		path: ['details', 'brewMethod']
 	})
 
-/** The day a pour belongs to on a timeline: the brew date the taster entered, or
- *  the server write time when they left it blank. Every time series uses this —
- *  `createdAt` alone misfiles a pour logged days after it was brewed. */
-export function pourDate(entry: Pick<TastingEntry, 'details' | 'createdAt'>): string {
-	return entry.details?.brewDate ?? entry.createdAt.slice(0, 10)
+const beerInput = z
+	.object({
+		beverageType: z.literal('beer'),
+		details: beerDetailsSchema.optional(),
+		notes: beerNotesSchema.optional()
+	})
+	.refine((input) => input.notes?.overallRating !== undefined, overallRatingIssue)
+	.refine((input) => Boolean(input.details?.brewery || input.details?.productName), {
+		message: 'Add a brewery or beer name',
+		path: ['details', 'brewery']
+	})
+	.refine((input) => input.details?.style !== undefined, {
+		message: 'Add a style',
+		path: ['details', 'style']
+	})
+
+export const createTastingInputSchema = z.discriminatedUnion('beverageType', [
+	coffeeInput,
+	beerInput
+])
+
+/** The day a pour belongs to on a timeline: the brew (coffee) or tasted (beer) date the
+ *  taster entered, or the server write time when they left it blank. Every time series
+ *  uses this — `createdAt` alone misfiles a pour logged days after it was drunk. */
+export function pourDate(entry: EntryPick<'beverageType' | 'details' | 'createdAt'>): string {
+	return (
+		(entry.beverageType === 'beer' ? entry.details?.tastedOn : entry.details?.brewDate) ??
+		entry.createdAt.slice(0, 10)
+	)
 }
